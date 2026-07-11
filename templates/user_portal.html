@@ -1,0 +1,305 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>User Portal | Eduke Intelligence</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+    <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4f0074',
+                        accent: '#7c00b5',
+                    },
+                    borderRadius: {
+                        '4xl': '2rem'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        html, body {
+            min-height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        body::-webkit-scrollbar { display: none; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Background mesh */
+        .mesh-bg {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(124,0,181,0.10), transparent 45%),
+                radial-gradient(circle at 80% 80%, rgba(79,0,116,0.10), transparent 45%);
+            filter: blur(40px);
+        }
+
+        .dark .mesh-bg {
+            background:
+                radial-gradient(circle at 20% 20%, rgba(124,0,181,0.18), transparent 45%),
+                radial-gradient(circle at 80% 80%, rgba(79,0,116,0.18), transparent 45%);
+        }
+
+        /* ===== CARD SYSTEM ===== */
+        .glass-card {
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(18px) saturate(160%);
+            -webkit-backdrop-filter: blur(18px) saturate(160%);
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow:
+                0 10px 20px rgba(0,0,0,0.05),
+                inset 0 1px 0 rgba(255,255,255,0.6);
+            transition:
+                transform .35s cubic-bezier(.2,.8,.2,1),
+                box-shadow .35s ease,
+                background .3s ease,
+                border-color .3s ease;
+            touch-action: pan-y;
+        }
+
+        .dark .glass-card {
+            background: rgba(30,41,59,0.55);
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow:
+                0 20px 35px rgba(0,0,0,0.35),
+                inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+
+        /* Hover only for real pointers */
+        @media (hover:hover) and (pointer:fine) {
+            .portal-card:hover {
+                transform: translateY(-10px);
+                border-color: rgba(124,0,181,0.5);
+                box-shadow:
+                    0 30px 60px rgba(124,0,181,0.18),
+                    inset 0 1px 0 rgba(255,255,255,0.7);
+            }
+
+            .dark .portal-card:hover {
+                box-shadow:
+                    0 0 0 1px rgba(124,0,181,0.4),
+                    0 30px 60px rgba(124,0,181,0.25);
+            }
+        }
+
+        .portal-card:active {
+            transform: scale(0.97);
+        }
+
+        /* Bento grid – unchanged layout */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-auto-rows: minmax(160px, auto);
+            gap: 1.5rem;
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .bento-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+                padding: 0 0.5rem;
+            }
+            .mobile-full {
+                grid-column: span 2 !important;
+                min-height: 130px;
+            }
+        }
+
+        /* Text gradient */
+        .text-gradient {
+            background: linear-gradient(135deg, #4f0074, #a855f7, #7c00b5);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 5s linear infinite;
+        }
+
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+
+        /* Cursor */
+        #cursor-dot, #cursor-outline {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+
+        @media (min-width:1024px) {
+            #cursor-dot {
+                display:block;
+                width:6px;
+                height:6px;
+                background:#7c00b5;
+            }
+            #cursor-outline {
+                display:block;
+                width:36px;
+                height:36px;
+                border:1.5px solid rgba(124,0,181,.4);
+            }
+            body { cursor:none; }
+        }
+    </style>
+</head>
+
+<body class="antialiased text-slate-900 dark:bg-[#020617] dark:text-slate-100">
+
+<div id="cursor-dot"></div>
+<div id="cursor-outline"></div>
+<div class="mesh-bg"></div>
+
+<header class="fixed top-0 w-full p-6 z-[100] flex justify-between items-center">
+    <div class="flex items-center space-x-3">
+        <a href="{% url 'index' %}" class="glass-card w-11 h-11 rounded-2xl flex items-center justify-center active:scale-90">
+            <i class="fas fa-home text-purple-600 dark:text-purple-400"></i>
+        </a>
+        <button id="theme-toggle" class="glass-card w-11 h-11 rounded-2xl flex items-center justify-center active:scale-90">
+            <i id="theme-icon" class="fas fa-moon text-purple-600 dark:text-yellow-400"></i>
+        </button>
+    </div>
+    <div class="glass-card px-4 py-2 rounded-full hidden sm:block">
+        <span class="font-bold tracking-[0.25em] text-[10px] uppercase opacity-60">Eduke Intelligence</span>
+    </div>
+</header>
+
+<main class="flex flex-col items-center justify-center px-6 pt-28 pb-16">
+    <div class="text-center mb-12" data-aos="fade-down">
+        <h1 class="text-6xl md:text-8xl font-black mb-2 tracking-tighter">
+            <span class="text-gradient">PORTALS</span>
+        </h1>
+        <p class="opacity-40 text-[10px] font-bold uppercase tracking-[0.4em]">
+            Unified Academic Gateway
+        </p>
+    </div>
+
+    <div class="bento-grid">
+        <!-- Institution -->
+        <a href="{% url 'login' %}" class="portal-card glass-card p-8 rounded-[2.5rem] md:row-span-2 mobile-full flex flex-col justify-between" data-aos="fade-up">
+            <div class="w-14 h-14 rounded-2xl bg-purple-500/15 border border-purple-500/20 flex items-center justify-center mb-6">
+                <i class="fas fa-tower-observation text-purple-600 dark:text-purple-400 text-2xl"></i>
+            </div>
+            <div>
+                <h3 class="text-2xl font-black">Institution</h3>
+                <p class="text-[9px] uppercase font-bold tracking-widest text-purple-600 dark:text-purple-400 opacity-70">
+                    Governance
+                </p>
+            </div>
+        </a>
+
+        <!-- Student -->
+        <a href="{% url 'student_login' %}" class="portal-card glass-card p-8 rounded-[2.5rem] md:col-span-2 mobile-full flex items-center justify-between" data-aos="fade-up" data-aos-delay="150">
+            <div class="max-w-[70%]">
+                <h3 class="text-3xl font-black">Student</h3>
+                <p class="text-xs opacity-70">
+                    Personalized learning & AI-driven analytics dashboards.
+                </p>
+            </div>
+            <div class="w-16 h-16 rounded-3xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center">
+                <i class="fas fa-user-graduate text-blue-600 dark:text-blue-400 text-3xl"></i>
+            </div>
+        </a>
+
+        <!-- Class Head -->
+        <a href="{% url 'class_head_login' %}" class="portal-card glass-card p-6 rounded-[2.5rem] flex flex-col items-center justify-center text-center" data-aos="fade-up" data-aos-delay="250">
+            <div class="w-12 h-12 mb-3 bg-indigo-500/15 rounded-xl flex items-center justify-center">
+                <i class="fas fa-user-tie text-indigo-500"></i>
+            </div>
+            <h3 class="font-bold text-xs">Class Head</h3>
+        </a>
+
+        <!-- Subject Head -->
+        <a href="{% url 'subject_head_login' %}" class="portal-card glass-card p-6 rounded-[2.5rem] flex flex-col items-center justify-center text-center" data-aos="fade-up" data-aos-delay="350">
+            <div class="w-12 h-12 mb-3 bg-emerald-500/15 rounded-xl flex items-center justify-center">
+                <i class="fas fa-book-open text-emerald-500"></i>
+            </div>
+            <h3 class="font-bold text-xs">Subject Head</h3>
+        </a>
+
+        <!-- Parent -->
+        <a href="{% url 'parent_login' %}" class="portal-card glass-card p-8 rounded-[2.5rem] md:col-span-2 mobile-full flex items-center space-x-6" data-aos="fade-up" data-aos-delay="450">
+            <div class="w-14 h-14 bg-orange-500/15 border border-orange-500/20 rounded-2xl flex items-center justify-center">
+                <i class="fas fa-heart text-orange-500 text-2xl"></i>
+            </div>
+            <div class="flex-grow">
+                <h3 class="text-2xl font-black">Parent Portal</h3>
+                <p class="text-[10px] uppercase font-bold opacity-60">Observer Access</p>
+            </div>
+            <i class="fas fa-chevron-right opacity-30"></i>
+        </a>
+    </div>
+</main>
+
+<footer class="py-10">
+    <p class="text-center text-[9px] font-bold uppercase tracking-[0.8em] opacity-20">
+        © 2026 Eduke Intelligence
+    </p>
+</footer>
+
+<script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script>
+    AOS.init({ duration: 800, once: true });
+
+    const toggle = document.getElementById('theme-toggle');
+    const icon = document.getElementById('theme-icon');
+
+    function setTheme(dark) {
+        document.documentElement.classList.toggle('dark', dark);
+        icon.className = dark ? 'fas fa-sun text-yellow-400' : 'fas fa-moon text-purple-600';
+    }
+
+    toggle.onclick = () => {
+        const dark = !document.documentElement.classList.contains('dark');
+        localStorage.theme = dark ? 'dark' : 'light';
+        setTheme(dark);
+    };
+
+    if (localStorage.theme === 'dark' ||
+        (!localStorage.theme && matchMedia('(prefers-color-scheme: dark)').matches)) {
+        setTheme(true);
+    }
+
+    const dot = document.getElementById('cursor-dot');
+    const outline = document.getElementById('cursor-outline');
+
+    window.addEventListener('mousemove', e => {
+        dot.style.left = outline.style.left = e.clientX + 'px';
+        dot.style.top = outline.style.top = e.clientY + 'px';
+    });
+</script>
+
+</body>
+</html>

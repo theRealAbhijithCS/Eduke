@@ -1,0 +1,64 @@
+{% for student in students %}
+{% with student_id=student.0 roll_no=student.1 name=student.2 %}
+<tr class="hover:bg-gradient-to-r hover:from-brand-500/5 hover:to-transparent transition-all duration-300 group {% if student_id in students_with_attendance %}opacity-50{% endif %}">
+  <td class="px-8 py-7 text-center">
+    <div class="inline-flex items-center justify-center text-black font-black text-sm group-hover:scale-110 transition-transform">
+      {{ roll_no }}
+      {% if student_id in students_with_attendance %}
+      <span class="ml-2 px-2 py-1 bg-amber-500 text-white text-[9px] font-black uppercase tracking-widest rounded-lg">Already Marked</span>
+      {% endif %}
+    </div>
+  </td>
+  <td class="px-8 py-7">
+    <div class="flex items-center gap-4">
+      <div class="relative">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center font-black text-xl text-slate-500 dark:text-slate-400 group-hover:from-brand-500 group-hover:to-brand-600 group-hover:text-white transition-all duration-300 shadow-md">
+          {{ name|slice:":1" }}
+        </div>
+        {% if student_id in students_with_attendance %}
+        <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 border-2 border-white dark:border-slate-900 opacity-100 flex items-center justify-center">
+          <i class="fa-solid fa-circle-exclamation text-white text-[8px]"></i>
+        </div>
+        {% else %}
+        <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 border-2 border-white dark:border-slate-900 opacity-0 group-hover:opacity-100 transition-opacity">
+          <i class="fa-solid fa-check text-white text-[10px] flex items-center justify-center h-full"></i>
+        </div>
+        {% endif %}
+      </div>
+      <div>
+        <span class="font-bold text-base text-slate-800 dark:text-white block">{{ name }}</span>
+        <span class="text-xs font-medium text-slate-400 dark:text-slate-500">Student ID: {{ student_id }}</span>
+      </div>
+    </div>
+  </td>
+  <td class="px-8 py-7">
+    <div class="flex items-center bg-slate-100 dark:bg-white/5 rounded-3xl p-1.5 w-fit mx-auto border-2 border-slate-200 dark:border-white/10 overflow-hidden shadow-inner">
+      {% if student_id in students_with_attendance %}
+      <div class="px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/20 cursor-not-allowed">
+        <span class="flex items-center gap-2">
+          <i class="fa-solid fa-lock"></i>
+          Locked
+        </span>
+      </div>
+      {% else %}
+      <label id="present-div-{{ student_id }}" class="attendance-btn px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-brand-500/50 dark:hover:bg-white/10 cursor-pointer transition-all">
+        <input id="present_{{ student_id }}" type="radio" value="present" name="attendance_{{ student_id }}" class="hidden" onchange="updateBackground('{{ student_id }}')">
+        <span class="flex items-center gap-2">
+          <i class="fa-solid fa-circle-check"></i>
+          Present
+        </span>
+      </label>
+
+      <label id="absent-div-{{ student_id }}" class="attendance-btn px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-brand-500/50 dark:hover:bg-white/10 cursor-pointer transition-all">
+        <input id="absent_{{ student_id }}" type="radio" value="absent" name="attendance_{{ student_id }}" class="hidden" onchange="updateBackground('{{ student_id }}')">
+        <span class="flex items-center gap-2">
+          <i class="fa-solid fa-circle-xmark"></i>
+          Absent
+        </span>
+      </label>
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% endwith %}
+{% endfor %}

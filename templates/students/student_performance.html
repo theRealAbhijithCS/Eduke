@@ -1,0 +1,607 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eduke | Performance Analytics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+  <script>
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+            accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b', emerald: '#10b981' }
+          },
+          animation: {
+            'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+    
+    html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.01em; background-color: #f8fafc; }
+    .dark body { background-color: #020617; }
+
+    #spotlight {
+      position: fixed; inset: 0; pointer-events: none;
+      background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.08) 0%, transparent 40%);
+      z-index: 1;
+    }
+
+    .glass-sidebar {
+      background: rgba(10, 10, 20, 0.95);
+      backdrop-filter: blur(30px);
+      border-right: 1px solid rgba(139, 92, 246, 0.1);
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .dark .glass-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-item-link.active {
+      color: #a78bfa !important;
+      background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+    }
+    .nav-item-link.active::before {
+      content: ''; position: absolute; left: 0; top: 25%; height: 50%; width: 4px;
+      background: #d946ef; box-shadow: 0 0 15px #d946ef; border-radius: 0 4px 4px 0;
+    }
+
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #8b5cf633; border-radius: 10px; }
+    
+    .stat-card-glow {
+      position: absolute; top: -50%; right: -50%; width: 200%; height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+      transform: rotate(30deg);
+    }
+
+    /* Score Dash Filling Animation */
+    @keyframes score-fill {
+      from { width: 0; }
+    }
+    .score-dash-fill {
+      animation: score-fill 1.5s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+  </style>
+</head>
+
+<body class="text-slate-900 transition-colors duration-500">
+  <div id="spotlight"></div>
+
+  <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+    
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-full">
+      <div class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5 bg-[#0a0a14]/80 backdrop-blur-xl">
+
+        <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+          <div class="flex items-center gap-3 group">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 animate-pulse">
+              <img src="{% static 'main/images/logobase_white.png' %}" class="w-6 h-6 object-contain">
+            </div>
+            <div>
+              <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span class="text-accent-fuchsia">.</span></h2>
+              <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Student Portal</p>
+            </div>
+          </div>
+          <button id="close-sidebar" class="lg:hidden text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+
+        <nav class="flex-grow px-4 space-y-4 overflow-y-auto custom-scroll py-2">
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Academic</p>
+            <div class="space-y-1">
+              <a href="{% url 'student_dashboard' %}" class="nav-item-link  relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-layer-group"></i><span class="font-bold text-sm">Dashboard</span>
+              </a>
+              <a href="{% url 'student_class' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-chalkboard"></i><span class="font-bold text-sm">Your Class</span>
+              </a>
+              <a href="{% url 'student_performance'%}" class="nav-item-link active relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-chart-line"></i><span class="font-bold text-sm">Performance</span>
+              </a>
+              <a href="{% url 'student_view_attendance'%}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-calendar-check"></i><span class="font-bold text-sm">View Attendance</span>
+              </a>
+              <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">AI Tools</p>
+            <div class="space-y-1">
+              <a href="{% url 'student_prediction' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_prediction' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-fire-flame-curved text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Prediction</span>
+              </a>
+
+              <a href="{% url 'student_eduke_bot' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_eduke_bot' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-robot text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Eduke Bot</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Social</p>
+            <div class="space-y-1">
+              <a href="{% url 'student_chat' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_chat' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-comments text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Eduke Chat</span>
+              </a>
+
+              <a href="{% url 'student_profile' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_profile' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-circle-user text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Profile</span>
+              </a>
+            </div>
+          </div>
+            </div>
+          </div>
+        </nav>
+
+        <div class="p-4 mt-auto">
+          <div class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 font-black text-white text-xs">
+                {{ student.name|slice:":1"|upper }}
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-[11px] font-black text-white truncate uppercase">{{ student.name }}</h4>
+                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Student</p>
+              </div>
+            </div>
+            <a href="{% url 'logout' %}" class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 transition-all">
+              <span class="text-[9px] font-black uppercase tracking-widest group-hover/btn:text-white">Logout</span>
+              <i class="fa-solid fa-power-off text-[10px] group-hover/btn:text-white"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+      
+      <header class="h-24 flex items-center justify-between px-8 shrink-0">
+        <div class="flex items-center gap-6">
+          <button id="hamburger-button" class="lg:hidden w-12 h-12 flex items-center justify-center rounded-2xl glass-card text-brand-600 shadow-xl">
+            <i class="fa-solid fa-bars-staggered"></i>
+          </button>
+          <div>
+            <h2 class="text-2xl lg:text-3xl font-black text-slate-800 dark:text-white tracking-tighter">
+              Performance <span class="bg-gradient-to-r from-brand-500 to-accent-fuchsia bg-clip-text text-transparent italic">Analytics</span>
+            </h2>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-4">
+          {% include 'students/_notification_bell.html' %}
+          <button id="theme-switch" class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center text-brand-600 dark:text-amber-400 hover:scale-110 transition-all duration-500 group">
+            <i id="theme-icon" class="fa-solid fa-moon text-lg group-hover:rotate-[360deg] transition-transform duration-700"></i>
+          </button>
+        </div>
+      </header>
+
+      <div id="content-scroll-container" class="flex-1 overflow-y-auto px-4 lg:px-8 pb-12 space-y-8 custom-scroll">
+        
+        <section class="glass-card rounded-[2.5rem] p-6 lg:p-8 flex flex-col md:flex-row justify-between items-center shadow-xl border border-white relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 blur-3xl rounded-full"></div>
+            <div class="flex items-center gap-6 relative z-10">
+                <div class="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-brand-600 to-indigo-700 flex items-center justify-center text-white text-3xl font-black shadow-2xl shadow-brand-500/40">
+                    {{ student.name|slice:":1"|upper }}
+                </div>
+                <div>
+                    <h2 class="text-3xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">{{ student.name }}</h2>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        <span class="px-3 py-1 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-300 rounded-lg text-[10px] font-black uppercase tracking-widest border border-brand-100 dark:border-brand-800">Roll #{{ student.roll_no }}</span>
+                        <span class="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 rounded-lg text-[10px] font-black uppercase tracking-widest border border-indigo-100 dark:border-indigo-800">{{ student.class_abbreviation }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-8 md:mt-0 relative z-10">
+                <form method="GET" action="{% url 'student_performance' %}" class="relative group">
+                    <select name="subject_id" class="appearance-none bg-slate-900 dark:bg-white text-white dark:text-slate-900 pl-8 pr-14 py-4 rounded-2xl font-bold text-sm focus:ring-4 focus:ring-brand-500/20 outline-none cursor-pointer transition-all shadow-xl" onchange="this.form.submit()">
+                        <option value="" {% if not selected_subject_id %}selected{% endif %}>Overall Analytics</option>
+                        {% for subject in subjects %}
+                            <option value="{{ subject.id }}" {% if subject.id == selected_subject_id %}selected{% endif %}>{{ subject.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="absolute right-5 top-1/2 -translate-y-1/2 flex flex-col text-[10px] text-brand-400">
+                      <i class="fa-solid fa-chevron-up"></i>
+                      <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="score-card group relative rounded-[2rem] border border-slate-200 bg-white p-7 shadow-xl transition-all hover:border-emerald-500/50 dark:border-slate-800 dark:bg-slate-900"
+         data-score="{{ evaluations.marks_percentage|default:0 }}">
+        <div class="flex justify-between items-start mb-6">
+            <div class="space-y-1">
+                <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Subject Mastery</h3>
+                <div class="flex items-baseline gap-1">
+                    <span class="text-4xl font-black tracking-tight text-slate-900 dark:text-white leading-none">
+                        {{ evaluations.marks_percentage|default:"0" }}
+                    </span>
+                    <span class="text-lg font-semibold text-slate-400 dark:text-slate-600">%</span>
+                </div>
+            </div>
+        </div>
+        <div class="score-dashes flex gap-1.5 h-1.5 w-full"></div>
+        <p class="mt-4 text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-tighter italic">Proficiency Index</p>
+    </div>
+
+  <div class="score-card group relative rounded-[2rem] border border-slate-200 bg-white p-7 shadow-xl transition-all hover:border-indigo-500/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-2xl"
+       data-score="{{ evaluations.attendance_percentage|default:0 }}">
+    <div class="flex justify-between items-start mb-6">
+      <div class="space-y-1">
+        <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Presence</h3>
+        <div class="flex items-baseline gap-1">
+          <span class="text-4xl font-black tracking-tight text-slate-900 dark:text-white leading-none">
+            {{ evaluations.attendance_percentage|default:"0" }}
+          </span>
+          <span class="text-lg font-semibold text-slate-400 dark:text-slate-600">%</span>
+        </div>
+      </div>
+    </div>
+    <div class="score-dashes flex gap-1.5 h-1.5 w-full"></div>
+    <p class="mt-4 text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-tighter italic">Engagement Rate</p>
+  </div>
+
+  <div class="score-card group relative rounded-[2rem] border border-slate-200 bg-white p-7 shadow-xl transition-all hover:border-fuchsia-500/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-2xl"
+       data-score="{{ quiz_percentage|default:0 }}">
+    <div class="flex justify-between items-start mb-6">
+      <div class="space-y-1">
+        <h3 class="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Retention</h3>
+        <div class="flex items-baseline gap-1">
+          <span class="text-4xl font-black tracking-tight text-slate-900 dark:text-white leading-none">
+            {{ quiz_percentage|default:"0" }}
+          </span>
+          <span class="text-lg font-semibold text-slate-400 dark:text-slate-600">%</span>
+        </div>
+      </div>
+    </div>
+    <div class="score-dashes flex gap-1.5 h-1.5 w-full"></div>
+    <p class="mt-4 text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-tighter italic">Recall Accuracy</p>
+  </div>
+</div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+           <div class="lg:col-span-1 space-y-4">
+    <h3 class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] ml-4">Faculty Audit</h3>
+    <div class="rounded-[2.5rem] border border-slate-200 bg-white/50 backdrop-blur-md p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900/50 space-y-1">
+        {% with ratings=evaluations %}
+        
+        <div class="audit-card group p-4 rounded-3xl transition-all hover:bg-white dark:hover:bg-slate-800/40 hover:shadow-md" 
+             data-rating="{{ ratings.study_time_rating|default:0 }}" data-color="emerald">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-book-open-reader text-xs"></i>
+                    </div>
+                    <span class="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-tight">Study Efficiency</span>
+                </div>
+                <span class="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg">
+                    {{ ratings.study_time_rating|default:"0" }}<span class="text-[10px] opacity-50 ml-0.5">/10</span>
+                </span>
+            </div>
+            <div class="audit-track flex gap-1.5 h-1.5 w-full"></div>
+        </div>
+
+        <div class="audit-card group p-4 rounded-3xl transition-all hover:bg-white dark:hover:bg-slate-800/40 hover:shadow-md" 
+             data-rating="{{ ratings.sleep_time_rating|default:0 }}" data-color="indigo">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-bed text-xs"></i>
+                    </div>
+                    <span class="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-tight">Sleep Hygiene</span>
+                </div>
+                <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-lg">
+                    {{ ratings.sleep_time_rating|default:"0" }}<span class="text-[10px] opacity-50 ml-0.5">/10</span>
+                </span>
+            </div>
+            <div class="audit-track flex gap-1.5 h-1.5 w-full"></div>
+        </div>
+
+        <div class="audit-card group p-4 rounded-3xl transition-all hover:bg-white dark:hover:bg-slate-800/40 hover:shadow-md" 
+             data-rating="{{ ratings.class_participation_rating|default:0 }}" data-color="fuchsia">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-600 dark:text-fuchsia-400 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-bullseye text-xs"></i>
+                    </div>
+                    <span class="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-tight">Class Focus</span>
+                </div>
+                <span class="text-xs font-black text-fuchsia-600 dark:text-fuchsia-400 bg-fuchsia-500/10 px-2 py-0.5 rounded-lg">
+                    {{ ratings.class_participation_rating|default:"0" }}<span class="text-[10px] opacity-50 ml-0.5">/10</span>
+                </span>
+            </div>
+            <div class="audit-track flex gap-1.5 h-1.5 w-full"></div>
+        </div>
+
+        <div class="audit-card group p-4 rounded-3xl transition-all hover:bg-white dark:hover:bg-slate-800/40 hover:shadow-md" 
+             data-rating="{{ ratings.academic_activity_rating|default:0 }}" data-color="amber">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-trophy text-xs"></i>
+                    </div>
+                    <span class="text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-tight">Curricular Engagement</span>
+                </div>
+                <span class="text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-lg">
+                    {{ ratings.academic_activity_rating|default:"0" }}<span class="text-[10px] opacity-50 ml-0.5">/10</span>
+                </span>
+            </div>
+            <div class="audit-track flex gap-1.5 h-1.5 w-full"></div>
+        </div>
+
+        {% endwith %}
+    </div>
+</div>
+
+            <div class="lg:col-span-2 space-y-4">
+                <h3 class="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] ml-2">Visual Performance Matrix</h3>
+                <div class="glass-card rounded-[2.5rem] p-8 h-[380px] shadow-xl relative group">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+
+    function renderAuditTracks() {
+    const cards = document.querySelectorAll('.audit-card');
+    const dotDelay = 80; 
+
+    cards.forEach(card => {
+        // FIX: Divide by 10 to convert a 100-scale score to a 10-dot scale
+        const rawScore = parseFloat(card.dataset.rating) || 0;
+        const rating = rawScore / 10; 
+        
+        const colorKey = card.dataset.color || 'emerald';
+        const track = card.querySelector('.audit-track');
+        if (!track) return;
+
+        track.innerHTML = ''; 
+
+        const colorMap = {
+            emerald: 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]',
+            indigo: 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]',
+            fuchsia: 'bg-fuchsia-500 shadow-[0_0_10px_rgba(217,70,239,0.4)]',
+            amber: 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.4)]'
+        };
+
+        const activeClass = colorMap[colorKey];
+
+        for (let i = 1; i <= 10; i++) {
+            const segment = document.createElement('div');
+            segment.className = 'flex-1 bg-slate-100 dark:bg-slate-800 rounded-full h-full overflow-hidden';
+            
+            const fill = document.createElement('div');
+            fill.className = `h-full w-0 transition-all duration-500 ease-out ${activeClass}`;
+            fill.style.transitionDelay = `${(i - 1) * dotDelay}ms`;
+
+            segment.appendChild(fill);
+            track.appendChild(segment);
+
+            let targetWidth = 0;
+            if (rating >= i) {
+                targetWidth = 100; 
+            } else if (rating > i - 1) {
+                targetWidth = (rating - (i - 1)) * 100; 
+            }
+
+            setTimeout(() => {
+                fill.style.width = targetWidth + '%';
+            }, 50);
+        }
+    });
+}
+
+
+    // Dash Indicator Logic
+   function updateScoreDashes() {
+    const cards = document.querySelectorAll('.score-card');
+    const segmentDuration = 400; // Time in ms for ONE segment to fill
+
+    cards.forEach(card => {
+        const score = parseFloat(card.dataset.score) || 0;
+        const dashContainer = card.querySelector('.score-dashes');
+        if (!dashContainer) return;
+
+        dashContainer.innerHTML = ''; 
+
+        // Color Logic
+        let statusColor = '';
+        let statusGlow = '';
+        if (score < 40) {
+            statusColor = 'bg-rose-500';
+            statusGlow = 'shadow-[0_0_12px_rgba(244,63,94,0.4)]';
+        } else if (score < 70) {
+            statusColor = 'bg-amber-500';
+            statusGlow = 'shadow-[0_0_12px_rgba(245,158,11,0.4)]';
+        } else {
+            statusColor = 'bg-emerald-500';
+            statusGlow = 'shadow-[0_0_12px_rgba(16,185,129,0.5)]';
+        }
+
+        for (let i = 1; i <= 5; i++) {
+            const dash = document.createElement('div');
+            dash.className = 'flex-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden';
+            
+            const fill = document.createElement('div');
+            
+            // Note: duration matches segmentDuration variable
+            fill.className = `h-full w-0 transition-all duration-[400ms] ease-linear ${statusColor} ${statusGlow}`;
+            
+            let targetWidth = 0;
+            const segmentMax = i * 20;
+            const segmentMin = (i - 1) * 20;
+
+            if (score >= segmentMax) {
+                targetWidth = 100;
+            } else if (score > segmentMin) {
+                targetWidth = (score - segmentMin) * 5;
+            }
+
+            // SEQUENTIAL DELAY CALCULATION
+            // Segment 1 starts at 0ms, Segment 2 starts at 400ms, etc.
+            fill.style.transitionDelay = `${(i - 1) * segmentDuration}ms`;
+
+            dash.appendChild(fill);
+            dashContainer.appendChild(dash);
+
+            // Trigger animation
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    fill.style.width = targetWidth + '%';
+                }, 50);
+            });
+        }
+    });
+}
+
+
+    // Improved Spotlight Effect
+    window.addEventListener('mousemove', e => {
+      const x = e.clientX;
+      const y = e.clientY;
+      const spotlight = document.getElementById('spotlight');
+      spotlight.style.setProperty('--x', `${x}px`);
+      spotlight.style.setProperty('--y', `${y}px`);
+    });
+
+    // Sidebar Interactions
+    const hamBtn = document.getElementById('hamburger-button');
+    const sidebar = document.getElementById('sidebar');
+    const closeBtn = document.getElementById('close-sidebar');
+
+    hamBtn.addEventListener('click', () => {
+        sidebar.classList.remove('-translate-x-full');
+        sidebar.classList.add('translate-x-0');
+    });
+    
+    closeBtn.addEventListener('click', () => {
+        sidebar.classList.add('-translate-x-full');
+        sidebar.classList.remove('translate-x-0');
+    });
+
+    // Advanced Chart Logic
+    let chartInstance = null;
+    const graphData = JSON.parse("{{ graph_data|safe|default:'[0,0,0,0,0,0,0]' }}");
+
+    function updateChart(data) {
+        const ctx = document.getElementById("performanceChart").getContext("2d");
+        const isDark = document.documentElement.classList.contains('dark');
+        
+        if (chartInstance) chartInstance.destroy();
+        
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, '#8b5cf6');
+        gradient.addColorStop(1, '#d946ef');
+
+        chartInstance = new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: ["Marks", "Attendance", "Study", "Sleep", "Particip.", "Activity", "Quiz"],
+                datasets: [{
+                    label: "Performance Index",
+                    data: data,
+                    backgroundColor: gradient,
+                    borderRadius: 12,
+                    hoverBackgroundColor: '#6366f1',
+                    borderWidth: 0,
+                    barThickness: 32,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 2000,
+                    easing: 'easeOutQuart'
+                },
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleFont: { size: 13, weight: 'bold' },
+                        padding: 12,
+                        cornerRadius: 10,
+                        displayColors: false
+                    }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        max: 100,
+                        grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', drawBorder: false },
+                        ticks: { color: '#94a3b8', font: { weight: '600' } }
+                    },
+                    x: { 
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', font: { weight: '600', size: 11 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // Theme Switch Logic
+    const themeSwitch = document.getElementById('theme-switch');
+    const themeIcon = document.getElementById('theme-icon');
+    
+    function updateThemeUI() {
+        const isDark = document.documentElement.classList.contains('dark');
+        themeIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        if(chartInstance) updateChart(graphData); // Refresh chart colors
+    }
+
+    themeSwitch.addEventListener('click', () => {
+        document.documentElement.classList.toggle('dark');
+        localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        updateThemeUI();
+    });
+
+    // Initialize
+    document.addEventListener("DOMContentLoaded", () => {
+        updateChart(graphData);
+        updateScoreDashes();
+        renderAuditTracks();
+        updateThemeUI();
+    });
+  </script>
+</body>
+</html>

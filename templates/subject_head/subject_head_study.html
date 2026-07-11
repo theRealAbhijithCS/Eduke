@@ -1,0 +1,536 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Eduke | Resource Repository</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+  <script>
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+            accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+    html,
+    body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      position: fixed;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      letter-spacing: -0.01em;
+      background-color: #f8fafc;
+    }
+
+    .dark body {
+      background-color: #020617;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    #spotlight {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.12) 0%, transparent 40%);
+      z-index: 5;
+    }
+
+    .glass-sidebar {
+      background: rgba(10, 10, 20, 0.95);
+      backdrop-filter: blur(30px);
+      border-right: 1px solid rgba(139, 92, 246, 0.1);
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .dark .glass-card {
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-item-link {
+      position: relative;
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .nav-item-link.active {
+      color: #a78bfa !important;
+      background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+    }
+
+    .nav-item-link.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 25%;
+      height: 50%;
+      width: 4px;
+      background: #d946ef;
+      box-shadow: 0 0 15px #d946ef;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .input-node {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 1rem;
+      padding: 0.75rem 1rem;
+      transition: all 0.3s ease;
+      outline: none;
+    }
+
+    .dark .input-node {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    .input-node:focus {
+      border-color: #7c3aed;
+      box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+    }
+
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #8b5cf633;
+      border-radius: 10px;
+    }
+
+    .dropzone-animate:hover {
+      border-color: #7c3aed;
+      background: rgba(124, 58, 237, 0.02);
+    }
+
+    @keyframes shimmer {
+    100% { transform: translateX(100%); }
+  }
+  </style>
+</head>
+
+<body class="text-slate-900 dark:text-white">
+  <div id="spotlight"></div>
+
+  <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+
+    <aside id="sidebar"
+      class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-full">
+      <div
+        class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5">
+
+        <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+          <div class="flex items-center gap-3 group cursor-pointer">
+            <div
+              class="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 group-hover:rotate-12 transition-transform animate-pulse bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 bg-[length:200%_200%]">
+              <img src="{% static 'main/images/logobase_white.png' %}" alt="Logo" class="w-6 h-6 object-contain">
+            </div>
+            <div>
+              <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span
+                  class="text-accent-fuchsia">.</span></h2>
+              <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Faculty Portal</p>
+            </div>
+          </div>
+          <button id="close-sidebar"
+            class="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white transition-all"><i
+              class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+
+        <nav class="flex-grow px-4 space-y-6 overflow-y-auto custom-scroll py-6">
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Management</p>
+            <div class="space-y-1">
+              <a href="{% url 'subject_head_dashboard' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-layer-group"></i><span class="font-bold text-sm">Dashboard</span>
+              </a>
+              <a href="#" class="nav-item-link active flex items-center gap-3 px-6 py-3 rounded-xl text-white">
+                <i class="fa-solid fa-book"></i><span class="font-bold text-sm">Your Subject</span>
+              </a>
+              <a href="{% url 'subject_head_class' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-chalkboard"></i><span class="font-bold text-sm">Your Class</span>
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Academic Tools</p>
+            <div class="space-y-1">
+              <a href="{% url 'subject_head_attendance' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-hand-point-up"></i><span class="font-bold text-sm">Attendance</span>
+              </a>
+              <a href="{% url 'subject_head_marks' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-user-pen"></i><span class="font-bold text-sm">Student Marks</span>
+              </a>
+              <a href="{% url 'subject_head_evaluation' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-square-poll-vertical"></i><span class="font-bold text-sm">Evaluation</span>
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Communication</p>
+            <div class="space-y-1">
+              <a href="{% url 'subject_head_chat' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-comments"></i><span class="font-bold text-sm">Eduke Chat</span>
+              </a>
+              <a href="{% url 'subject_head_profile' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-circle-user"></i><span class="font-bold text-sm">Profile</span>
+              </a>
+            </div>
+          </div>
+        </nav>
+
+        <div class="p-4 mt-auto">
+          <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3">
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 shadow-lg font-black text-white uppercase">
+                {{ subject_name|slice:":1" }}</div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-[11px] font-black text-white truncate uppercase">{{ subject_name }}</h4>
+                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Subject Head</p>
+              </div>
+            </div>
+            <a href="{% url 'logout' %}"
+              class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 hover:text-white transition-all">
+              <span class="text-[9px] font-black uppercase tracking-widest">Logout</span>
+              <i class="fa-solid fa-power-off text-[10px]"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+
+      <header class="h-24 flex items-center justify-between px-8 shrink-0">
+        <div class="flex items-center gap-4 lg:gap-6">
+          <a href="{% url 'subject_head_subjects' %}"
+            class="w-10 h-10 lg:w-12 lg:h-12 flex items-center justify-center rounded-2xl glass-card border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-brand-500 hover:border-brand-500/50 transition-all group shadow-sm bg-white/50 dark:bg-slate-900/50">
+            <i class="fa-solid fa-arrow-left transition-transform group-hover:-translate-x-1"></i>
+          </a>
+
+          <div class="flex items-center gap-6">
+            <button id="hamburger-button"
+              class="lg:hidden w-12 h-12 flex items-center justify-center rounded-2xl glass-card text-brand-600 shadow-lg border border-brand-500/20">
+              <i class="fas fa-bars"></i>
+            </button>
+
+            <h2
+              class="text-2xl lg:text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic">
+              Resource <span class="text-brand-500">Repository</span>
+            </h2>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          {% include 'subject_head/_notification_bell.html' %}
+          <button id="theme-switch" class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center hover:scale-110 transition-transform">
+            <i id="theme-icon" class="fa-solid fa-moon text-brand-600 text-lg"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="flex-1 overflow-y-auto px-4 lg:px-8 pb-12 space-y-8 custom-scroll">
+
+        <section class="relative p-[1px] rounded-[3.5rem] overflow-hidden group">
+          <div
+            class="absolute inset-0 bg-gradient-to-r from-brand-500 via-accent-indigo to-brand-400 opacity-20 group-hover:opacity-100 group-hover:animate-spin-slow transition-opacity duration-700 -z-10"
+            style="margin: -200%;"></div>
+
+          <div class="relative bg-white/90 dark:bg-slate-950/90 backdrop-blur-3xl rounded-[3.4rem] p-2">
+            <div
+              class="relative flex flex-col lg:flex-row items-center justify-between gap-8 p-10 lg:p-14 rounded-[3rem] border border-white dark:border-slate-800 shadow-[inset_0_2px_20px_rgba(255,255,255,0.2)] dark:shadow-none overflow-hidden">
+
+              <div
+                class="absolute right-0 top-0 w-1/3 h-full bg-gradient-to-l from-brand-500/5 to-transparent pointer-events-none">
+              </div>
+
+              <div class="relative z-10 flex flex-col gap-6 max-w-2xl">
+                <div
+                  class="inline-flex items-center gap-3 w-fit px-4 py-2 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span class="relative flex h-2 w-2">
+                    <span
+                      class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
+                  </span>
+                  <span
+                    class="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500 dark:text-slate-400">Resource
+                    Pipeline</span>
+                </div>
+
+                <div class="space-y-4">
+                  <h3 class="text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+                    Broadcast <span
+                      class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-accent-indigo italic">Materials</span>
+                  </h3>
+                  <p class="text-slate-500 dark:text-slate-400 text-lg font-medium leading-relaxed">
+                    Distribute high-fidelity assets across the network. Nodes are <span
+                      class="text-slate-900 dark:text-white font-bold underline decoration-brand-500/30">automatically
+                      indexed</span> for instant student retrieval.
+                  </p>
+                </div>
+              </div>
+
+              <div class="relative z-10">
+                <button onclick="toggleDocForm()"
+                  class="group/btn relative flex items-center gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 pr-8 rounded-[2rem] transition-all duration-300 hover:border-brand-500 hover:shadow-2xl hover:shadow-brand-500/20 active:scale-95">
+
+                  <div
+                    class="w-14 h-14 flex items-center justify-center rounded-[1.4rem] bg-brand-600 text-white shadow-lg shadow-brand-500/40 group-hover/btn:rotate-90 transition-transform duration-500">
+                    <i class="fa-solid fa-plus text-xl"></i>
+                  </div>
+
+                  <div class="flex flex-col items-start">
+                    <span
+                      class="text-[10px] font-black uppercase tracking-widest text-brand-600 dark:text-brand-400">Action</span>
+                    <span class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">Deploy
+                      Node</span>
+                  </div>
+
+                  <i
+                    class="fa-solid fa-chevron-right text-[10px] text-slate-300 group-hover/btn:text-brand-500 group-hover/btn:translate-x-2 transition-all ml-4"></i>
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <div id="docForm" class="hidden animate-in fade-in zoom-in-95 slide-in-from-top-8 duration-700">
+  <div class="relative p-[1px] rounded-[3.5rem] bg-gradient-to-b from-brand-500/20 to-transparent shadow-2xl">
+    
+    <div class="glass-card p-8 lg:p-12 rounded-[3.4rem] bg-white/80 dark:bg-slate-950/90 backdrop-blur-3xl border border-white/40 dark:border-slate-800/50 relative overflow-hidden">
+      
+      <div class="flex items-center justify-between mb-10 px-2">
+        <div>
+          <h4 class="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Initialize <span class="text-brand-500">Node</span></h4>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Direct Core Repository Injection</p>
+        </div>
+        <button onclick="toggleDocForm()" class="w-10 h-10 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-900 text-slate-400 hover:text-red-500 transition-colors">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        {% csrf_token %}
+
+        <div class="space-y-8">
+          <div class="group relative">
+            <label class="flex items-center gap-2 mb-3 ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 group-focus-within:text-brand-500 transition-colors">
+              <i class="fa-solid fa-quote-left text-[8px]"></i> Announcement_Bulletin
+            </label>
+            <div class="relative">
+              <textarea name="announcement" id="announcement" rows="6"
+                class="w-full p-6 rounded-3xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all outline-none text-slate-700 dark:text-slate-200 font-medium leading-relaxed resize-none" 
+                placeholder="Broadcast a system-wide message..." required></textarea>
+              <div class="absolute bottom-4 right-6 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Markdown Supported</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-8">
+          <div class="group relative h-full flex flex-col">
+            <label class="flex items-center gap-2 mb-3 ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 group-focus-within:text-accent-indigo transition-colors">
+              <i class="fa-solid fa-paperclip text-[8px]"></i> Data_Packet_Upload
+            </label>
+            
+            <label for="dropzone-file" class="relative flex-1 group/drop flex flex-col items-center justify-center w-full border-2 border-slate-200 dark:border-slate-800 border-dashed rounded-[2.5rem] cursor-pointer bg-slate-50/50 dark:bg-slate-900/20 hover:bg-brand-500/[0.02] hover:border-brand-500/50 transition-all duration-500 overflow-hidden">
+              
+              <div class="absolute inset-0 opacity-0 group-hover/drop:opacity-100 transition-opacity duration-700 pointer-events-none">
+                <div class="absolute -inset-[100%] animate-[spin_10s_linear_infinite] bg-[conic-gradient(from_0deg,transparent_0,transparent_70%,rgba(99,102,241,0.1)_100%)]"></div>
+              </div>
+
+              <div class="relative z-10 flex flex-col items-center justify-center px-6 text-center">
+                <div class="w-20 h-20 mb-6 rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-brand-500 flex items-center justify-center shadow-2xl group-hover/drop:scale-110 group-hover/drop:shadow-brand-500/20 transition-all duration-500">
+                  <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
+                </div>
+                <p class="text-sm text-slate-800 dark:text-white font-black uppercase tracking-tight">Select Package</p>
+                <p class="mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-loose">Syllabus • Media • Config<br><span class="text-brand-500/60">LIMIT: 50MB</span></p>
+                
+                <div id="file-name" class="mt-6 px-5 py-2 rounded-2xl bg-emerald-500/10 text-emerald-600 font-black text-[10px] hidden uppercase tracking-widest items-center gap-3 border border-emerald-500/20 animate-in fade-in slide-in-from-bottom-2">
+                  <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <span id="file-text"></span>
+                </div>
+              </div>
+              <input id="dropzone-file" type="file" name="file_url" class="hidden" onchange="handleFile(this)" />
+            </label>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2 mt-4">
+          <button type="submit" class="group/btn relative w-full py-6 rounded-3xl bg-slate-900 dark:bg-brand-600 text-white font-black text-[11px] uppercase tracking-[0.5em] shadow-2xl hover:shadow-brand-500/30 hover:-translate-y-1 transition-all active:scale-[0.98] overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:animate-[shimmer_1.5s_infinite]"></div>
+            <span class="relative z-10 flex items-center justify-center gap-4">
+              Commit to Core Repository <i class="fa-solid fa-chevron-right text-[8px]"></i>
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+        <section class="space-y-6">
+          <h3 class="mono text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-2">
+            <i class="fa-solid fa-list-check"></i> Active_Registry_Resources
+          </h3>
+
+          <div id="docList" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    {% for doc in docs %}
+    <a href="/{{ doc.1 }}" target="_blank" 
+       class="glass-card group relative aspect-square p-6 rounded-[2rem] border border-slate-200/50 dark:border-white/10 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-500/20 hover:border-brand-500/50">
+        
+        <div class="flex justify-between items-start">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500/20 to-brand-600/5 text-brand-600 dark:text-brand-400 flex items-center justify-center text-2xl shadow-sm group-hover:scale-110 group-hover:bg-brand-600 group-hover:text-white transition-all duration-500">
+                {% if doc.1 %}
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                {% else %}
+                    <i class="fa-solid fa-tower-broadcast"></i>
+                {% endif %}
+            </div>
+            
+            <i class="fa-solid fa-arrow-up-right-from-square text-xs text-slate-300 dark:text-slate-600 group-hover:text-brand-500 transition-colors"></i>
+        </div>
+
+        <div class="mt-4 flex-grow overflow-hidden">
+            <h3 class="text-base font-black text-slate-900 dark:text-white leading-tight break-words uppercase tracking-tight">
+                {{ doc.1|cut:"media/uploads/"|truncatechars:20 }}
+            </h3>
+            {% if doc.2 %}
+            <p class="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-2 line-clamp-3 leading-relaxed italic">
+                "{{ doc.2 }}"
+            </p>
+            {% endif %}
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 dark:border-white/5 mt-auto">
+            <span class="block text-[9px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-widest mb-1 opacity-80">
+                LOG_TS
+            </span>
+            <div class="text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                <i class="fa-regular fa-clock text-[8px]"></i>
+                {{ doc.3|date:"M j, y, g:i A"|lower }}
+            </div>
+        </div>
+    </a>
+    {% empty %}
+    <div class="col-span-full py-24 text-center glass-card rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-white/5 bg-slate-50/30 dark:bg-white/5">
+        <i class="fa-solid fa-satellite-dish text-5xl text-slate-300 dark:text-slate-700 animate-pulse mb-4"></i>
+        <p class="text-slate-400 font-bold uppercase tracking-widest text-xs italic">Registry Empty</p>
+    </div>
+    {% endfor %}
+</div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Spotlight Movement
+    window.addEventListener('mousemove', e => {
+      document.getElementById('spotlight').style.setProperty('--x', `${e.clientX}px`);
+      document.getElementById('spotlight').style.setProperty('--y', `${e.clientY}px`);
+    });
+
+    function toggleDocForm() {
+      document.getElementById("docForm").classList.toggle("hidden");
+    }
+
+    // File selection UI update
+    document.getElementById('dropzone-file').addEventListener('change', function (e) {
+      const fileName = e.target.files[0] ? e.target.files[0].name : '';
+      const badge = document.getElementById('file-name');
+      const text = document.getElementById('file-text');
+      if (fileName) {
+        text.textContent = fileName;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    });
+
+    // Sidebar Toggles
+    const hamBtn = document.getElementById('hamburger-button');
+    const sidebar = document.getElementById('sidebar');
+    const closeBtn = document.getElementById('close-sidebar');
+    hamBtn.addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+    closeBtn.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+
+    // Dark Mode
+    const themeSwitch = document.getElementById('theme-switch');
+    const themeIcon = document.getElementById('theme-icon');
+    
+    // Initialize theme icon based on current theme
+    if (document.documentElement.classList.contains('dark')) {
+      themeIcon.className = 'fa-solid fa-sun text-yellow-400 text-lg';
+    } else {
+      themeIcon.className = 'fa-solid fa-moon text-brand-600 text-lg';
+    }
+    
+    themeSwitch.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      const isDark = document.documentElement.classList.contains('dark');
+      localStorage.theme = isDark ? 'dark' : 'light';
+      themeIcon.className = isDark ? 'fa-solid fa-sun text-yellow-400 text-lg' : 'fa-solid fa-moon text-brand-600 text-lg';
+    });
+  </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-link.active');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,809 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduke | Identity Profile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+                        accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        /* Layout Lock */
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: fixed;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .dark body {
+            background-color: #020617;
+        }
+
+        /* Background Spotlight */
+        #spotlight {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.12) 0%, transparent 40%);
+            z-index: 50;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 0;
+            opacity: 0.3;
+            animation: float 20s infinite alternate;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(80px, 40px);
+            }
+        }
+
+        /* UI Components */
+        .glass-sidebar {
+            background: rgba(10, 10, 20, 0.95);
+            backdrop-filter: blur(30px);
+            border-right: 1px solid rgba(139, 92, 246, 0.1);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .nav-item-link {
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .nav-item-link.active {
+            color: #a78bfa !important;
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+        }
+
+        .nav-item-link.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 25%;
+            height: 50%;
+            width: 4px;
+            background: #d946ef;
+            box-shadow: 0 0 15px #d946ef;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .custom-input {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .dark .custom-input {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .custom-input:focus {
+            background: white;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+        }
+
+        .dark .custom-input:focus {
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        .identity-node {
+            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+            border: 1px solid #ddd6fe;
+        }
+
+        .dark .identity-node {
+            background: rgba(139, 92, 246, 0.05);
+            border-color: rgba(139, 92, 246, 0.1);
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #8b5cf633;
+            border-radius: 10px;
+        }
+
+        /* Animation Utility */
+        .animate-in {
+            animation-name: enter;
+            animation-duration: 500ms;
+        }
+
+        @keyframes enter {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+    <div class="orb w-96 h-96 bg-brand-500 top-[-10%] left-[-10%]"></div>
+    <div class="orb w-80 h-80 bg-accent-indigo bottom-[10%] right-[5%]"></div>
+
+    <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+
+        <aside id="sidebar"
+            class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-full">
+            <div
+                class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5 bg-[#0a0a14]/80 backdrop-blur-xl">
+
+                <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+                    <div class="flex items-center gap-3 group">
+                        <div
+                            class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 animate-pulse">
+                            <img src="{% static 'main/images/logobase_white.png' %}" class="w-6 h-6 object-contain">
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span
+                                    class="text-accent-fuchsia">.</span></h2>
+                            <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Student Portal
+                            </p>
+                        </div>
+                    </div>
+                    <button id="close-sidebar" class="lg:hidden text-slate-400 hover:text-white"><i
+                            class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+
+                <nav class="flex-grow px-4 space-y-4 overflow-y-auto custom-scroll py-2">
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Academic
+                        </p>
+                        <div class="space-y-1">
+                            <a href="{% url 'student_dashboard' %}"
+                                class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                                <i class="fa-solid fa-layer-group"></i><span class="font-bold text-sm">Dashboard</span>
+                            </a>
+                            <a href="{% url 'student_class' %}"
+                                class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                                <i class="fa-solid fa-chalkboard"></i><span class="font-bold text-sm">Your Class</span>
+                            </a>
+                            <a href="{% url 'student_performance'%}"
+                                class="nav-item-link  relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                                <i class="fa-solid fa-chart-line"></i><span class="font-bold text-sm">Performance</span>
+                            </a>
+                            <a href="{% url 'student_view_attendance'%}"
+                                class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                                <i class="fa-solid fa-calendar-check"></i><span class="font-bold text-sm">View Attendance</span>
+                            </a>
+                            <div>
+                                <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">AI
+                                    Tools</p>
+                                <div class="space-y-1">
+                                    <a href="{% url 'student_prediction' %}"
+                                        class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_prediction' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                                        <i
+                                            class="fa-solid fa-fire-flame-curved text-base group-hover:text-brand-400 transition-colors"></i>
+                                        <span class="font-bold text-sm">Prediction</span>
+                                    </a>
+
+                                    <a href="{% url 'student_eduke_bot' %}"
+                                        class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_eduke_bot' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                                        <i
+                                            class="fa-solid fa-robot text-base group-hover:text-brand-400 transition-colors"></i>
+                                        <span class="font-bold text-sm">Eduke Bot</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="pt-2">
+                                <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">
+                                    Social</p>
+                                <div class="space-y-1">
+                                    <a href="{% url 'student_chat' %}"
+                                        class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_chat' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                                        <i
+                                            class="fa-solid fa-comments text-base group-hover:text-brand-400 transition-colors"></i>
+                                        <span class="font-bold text-sm">Eduke Chat</span>
+                                    </a>
+
+                                    <a href="{% url 'student_profile' %}"
+                                        class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_profile' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                                        <i
+                                            class="fa-solid fa-circle-user text-base group-hover:text-brand-400 transition-colors"></i>
+                                        <span class="font-bold text-sm">Profile</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+
+                <div class="p-4 mt-auto">
+                    <div
+                        class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 font-black text-white text-xs">
+                                {{ student_name|slice:":1"|upper }}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="text-[11px] font-black text-white truncate uppercase">{{ student_name }}</h4>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Student</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'logout' %}"
+                            class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 transition-all">
+                            <span
+                                class="text-[9px] font-black uppercase tracking-widest group-hover/btn:text-white">Logout</span>
+                            <i class="fa-solid fa-power-off text-[10px] group-hover/btn:text-white"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+
+            <header class="relative w-full h-24 flex items-center justify-between px-8 bg-transparent shrink-0 z-40">
+
+                <div class="flex items-center gap-6">
+                    <button id="hamburger-button" class="lg:hidden w-12 h-12 flex items-center justify-center rounded-2xl 
+                   bg-transparent border border-slate-200 dark:border-white/10 
+                   text-brand-600 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95 transition-all">
+                        <i class="fas fa-bars-staggered"></i>
+                    </button>
+
+                    <div class="flex flex-col">
+                        <div class="flex items-center gap-2 mb-1">
+                            <div
+                                class="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-brand-500/10 border border-brand-500/10">
+                                <span
+                                    class="text-[9px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-[0.2em]">
+                                    Security Terminal
+                                </span>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-[7px] text-slate-400 opacity-50"></i>
+                            <span
+                                class="text-[9px] font-bold text-slate-400 uppercase tracking-widest opacity-60">v2.0</span>
+                        </div>
+
+                        <h1
+                            class="text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">
+                            Identity <span class="text-brand-500 italic font-black relative">
+                                Module
+                                <span
+                                    class="absolute -bottom-1 left-0 w-full h-[2px] bg-brand-500/30 rounded-full"></span>
+                            </span>
+                        </h1>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="hidden md:flex items-center gap-3 px-4 py-2 rounded-2xl 
+                    border border-slate-200 dark:border-white/10 
+                    relative group transition-all hover:border-emerald-500/30">
+
+                        <div class="relative flex items-center gap-3">
+                            <div class="relative flex">
+                                <span
+                                    class="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-40 animate-ping"></span>
+                                <div class="relative w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]">
+                                </div>
+                            </div>
+                            <span
+                                class="text-[10px] font-black uppercase text-slate-500 dark:text-emerald-500/80 tracking-[0.15em]">
+                                Active Node
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        {% include 'students/_notification_bell.html' %}
+                        <button id="theme-switch" class="w-12 h-12 rounded-2xl flex items-center justify-center 
+                   bg-transparent border border-slate-200 dark:border-white/10 
+                   text-slate-500 dark:text-amber-400 
+                   hover:border-brand-500/50 hover:text-brand-500 hover:scale-110 transition-all duration-300">
+                            <i id="theme-icon" class="fa-solid fa-moon text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div id="content-scroll-container" class="flex-1 overflow-y-auto px-8 py-8 space-y-8 custom-scroll">
+
+                <div class="group relative max-w-2xl mx-auto py-2 px-2">
+                    <div
+                        class="absolute -inset-1 bg-gradient-to-r from-brand-600 to-indigo-600 rounded-[3rem] blur-xl opacity-20 group-hover:opacity-40 transition duration-1000">
+                    </div>
+
+                    <div
+                        class="relative flex items-center h-60 bg-slate-950/90 rounded-[2.8rem] border border-white/10 backdrop-blur-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+
+                        <div class="absolute inset-0 pointer-events-none">
+                            <div
+                                class="absolute top-0 right-0 w-80 h-80 bg-brand-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2">
+                            </div>
+                            <div
+                                class="absolute bottom-0 left-0 w-64 h-64 bg-fuchsia-500/10 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2">
+                            </div>
+                        </div>
+
+                        <div class="flex flex-1 items-center px-12 gap-10 relative z-10">
+
+                            <div class="relative shrink-0">
+                                <div
+                                    class="w-36 h-36 rounded-[2.2rem] bg-gradient-to-tr from-white/10 to-white/5 border border-white/20 flex items-center justify-center shadow-2xl transition-transform duration-700 group-hover:scale-105 group-hover:rotate-2">
+                                    <div
+                                        class="w-28 h-28 rounded-3xl bg-slate-900 flex items-center justify-center border border-white/10 overflow-hidden">
+                                        <span
+                                            class="text-6xl font-black bg-gradient-to-br from-white via-white to-slate-500 bg-clip-text text-transparent">
+                                            {{ student_name|slice:":1"|upper }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div
+                                    class="absolute -bottom-2 -right-2 px-3 py-1 bg-emerald-500 rounded-full border-4 border-slate-950 shadow-lg">
+                                    <p class="text-[9px] font-black text-white uppercase tracking-tighter">Verified</p>
+                                </div>
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <div class="space-y-1 mb-6">
+                                    <div class="flex items-center gap-3">
+                                        <span class="h-1.5 w-10 bg-brand-500 rounded-full"></span>
+                                        <span
+                                            class="text-[10px] font-black text-brand-400 uppercase tracking-[0.3em]">Registry
+                                            Level 01</span>
+                                    </div>
+                                    <h2
+                                        class="text-4xl md:text-5xl font-black text-white truncate tracking-tighter uppercase drop-shadow-sm">
+                                        {{ student_name }}
+                                    </h2>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-8 border-t border-white/5 pt-6">
+                                    <div class="flex flex-col gap-1">
+                                        <span
+                                            class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Student
+                                            ID</span>
+                                        <span
+                                            class="text-white font-mono text-lg font-black tracking-widest text-brand-200">
+                                            #{{ roll_no }}
+                                        </span>
+                                    </div>
+                                    <div class="flex flex-col gap-1 border-l border-white/10 pl-8">
+                                        <span
+                                            class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Classification</span>
+                                        <div class="flex items-center gap-2">
+                                            <i class="fa-solid fa-layer-group text-brand-500 text-xs"></i>
+                                            <span
+                                                class="text-white text-sm font-bold uppercase tracking-wide">{{class_name}}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <i class="fa-solid fa-fingerprint text-6xl text-white"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="group relative max-w-5xl mx-auto">
+                    <div
+                        class="absolute -inset-px bg-gradient-to-r from-brand-600/20 via-indigo-600/20 to-brand-600/20 rounded-[3rem] blur-xl opacity-50 group-hover:opacity-100 transition duration-1000">
+                    </div>
+
+                    <div
+                        class="relative bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl rounded-[3rem] border border-white/20 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.1)] p-10 lg:p-14">
+                        <form method="POST" action="{% url 'student_profile' %}" class="space-y-10">
+                            {% csrf_token %}
+
+                            <div class="space-y-8">
+                                <div class="flex items-center gap-5">
+                                    <div
+                                        class="flex items-center justify-center w-12 h-12 rounded-2xl bg-brand-500/10 border border-brand-500/20">
+                                        <i
+                                            class="fa-solid fa-shield-halved text-brand-600 dark:text-brand-400 text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h3
+                                            class="text-sm font-black text-brand-600 dark:text-brand-400 uppercase tracking-[0.4em]">
+                                            Core Credentials</h3>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Update
+                                            your personal identification</p>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div class="group/input space-y-4">
+                                        <label for="name"
+                                            class="flex items-center gap-2 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-2">
+                                            <i class="fa-solid fa-user text-brand-500"></i>
+                                            Full Legal Name
+                                        </label>
+                                        <div class="relative">
+                                            <input type="text" id="name" name="name" value="{{ student_name }}"
+                                                class="custom-input w-full px-8 py-5 pl-12 rounded-[2rem] font-bold outline-none transition-all duration-300 focus:scale-[1.02] focus:shadow-xl focus:shadow-brand-500/10"
+                                                placeholder="Enter Full Name">
+                                            <div class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400">
+                                                <i class="fa-solid fa-signature text-lg"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="group/input space-y-4">
+                                        <label for="password"
+                                            class="flex items-center gap-2 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-2">
+                                            <i class="fa-solid fa-lock text-brand-500"></i>
+                                            System Key (Password)
+                                        </label>
+                                        <div class="relative">
+                                            <input type="password" id="password" name="password"
+                                                value="{{ current_password }}"
+                                                class="custom-input w-full px-8 py-5 pl-12 pr-12 rounded-[2rem] font-bold outline-none transition-all duration-300 focus:scale-[1.02] focus:shadow-xl focus:shadow-brand-500/10"
+                                                onfocus="this.type='text'; document.getElementById('password-validation').classList.remove('hidden')"
+                                                onblur="if (!document.activeElement.id || document.activeElement.id !== 'submit-btn') { this.type='password'; document.getElementById('password-validation').classList.add('hidden'); }"
+                                                oninput="checkPassword(this.value)" placeholder="Enter Security Key">
+                                            <div class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400">
+                                                <i class="fa-solid fa-key text-lg"></i>
+                                            </div>
+                                            <button type="button" onclick="togglePasswordVisibility()"
+                                                class="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-500 transition-colors">
+                                                <i id="toggle-icon" class="fa-solid fa-eye text-lg"></i>
+                                            </button>
+                                        </div>
+
+                                        <div id="password-validation"
+                                            class="hidden animate-in fade-in slide-in-from-top-4 duration-500">
+                                            <div
+                                                class="mt-3 p-6 rounded-[2rem] bg-gradient-to-br from-slate-50/80 to-slate-100/50 dark:from-slate-800/50 dark:to-slate-900/50 border border-slate-200/50 dark:border-white/5 backdrop-blur-xl shadow-lg">
+                                                <div class="flex items-center gap-2 mb-4">
+                                                    <i class="fa-solid fa-circle-check text-emerald-500 text-xs"></i>
+                                                    <span
+                                                        class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Security
+                                                        Requirements</span>
+                                                </div>
+                                                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                                    <div id="v-len"
+                                                        class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-rose-500/5 border border-rose-500/10 text-rose-500 transition-all duration-300">
+                                                        <div class="w-2 h-2 rounded-full bg-current shadow-lg"></div>
+                                                        <span class="text-[8px] font-black uppercase tracking-wide">6+
+                                                            Chars</span>
+                                                    </div>
+                                                    <div id="v-up"
+                                                        class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-rose-500/5 border border-rose-500/10 text-rose-500 transition-all duration-300">
+                                                        <div class="w-2 h-2 rounded-full bg-current shadow-lg"></div>
+                                                        <span class="text-[8px] font-black uppercase tracking-wide">1
+                                                            Upper</span>
+                                                    </div>
+                                                    <div id="v-lower"
+                                                        class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-rose-500/5 border border-rose-500/10 text-rose-500 transition-all duration-300">
+                                                        <div class="w-2 h-2 rounded-full bg-current shadow-lg"></div>
+                                                        <span class="text-[8px] font-black uppercase tracking-wide">1
+                                                            Lower</span>
+                                                    </div>
+                                                    <div id="v-num"
+                                                        class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-rose-500/5 border border-rose-500/10 text-rose-500 transition-all duration-300">
+                                                        <div class="w-2 h-2 rounded-full bg-current shadow-lg"></div>
+                                                        <span class="text-[8px] font-black uppercase tracking-wide">1
+                                                            Digit</span>
+                                                    </div>
+                                                    <div id="v-spl"
+                                                        class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-rose-500/5 border border-rose-500/10 text-rose-500 transition-all duration-300 col-span-2 lg:col-span-4">
+                                                        <div class="w-2 h-2 rounded-full bg-current shadow-lg"></div>
+                                                        <span class="text-[8px] font-black uppercase tracking-wide">1
+                                                            Special Character (!@#$%^&*)</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-8">
+                                <div class="flex items-center gap-5">
+                                    <div
+                                        class="flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20">
+                                        <i
+                                            class="fa-solid fa-network-wired text-indigo-600 dark:text-indigo-400 text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h3
+                                            class="text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.4em]">
+                                            System Nodes</h3>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Your
+                                            institutional connections</p>
+                                    </div>
+                                    <div class="h-px flex-1 bg-slate-200 dark:bg-white/5"></div>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <div
+                                        class="group/card identity-node relative overflow-hidden p-7 rounded-[2.5rem] transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl hover:shadow-brand-500/10">
+                                        <div
+                                            class="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover/card:bg-brand-500/10 transition-all">
+                                        </div>
+                                        <div class="relative">
+                                            <div class="flex items-center gap-2 mb-3">
+                                                <i class="fa-solid fa-chalkboard-user text-brand-500 text-sm"></i>
+                                                <p
+                                                    class="text-[9px] font-black text-brand-400 uppercase tracking-wider">
+                                                    Division Lead</p>
+                                            </div>
+                                            <p
+                                                class="font-black text-brand-800 dark:text-brand-300 text-lg uppercase tracking-tight">
+                                                {{teacher_name }}</p>
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="group/card identity-node relative overflow-hidden p-7 rounded-[2.5rem] transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl hover:shadow-brand-500/10">
+                                        <div
+                                            class="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover/card:bg-brand-500/10 transition-all">
+                                        </div>
+                                        <div class="relative">
+                                            <div class="flex items-center gap-2 mb-3">
+                                                <i class="fa-solid fa-envelope text-brand-500 text-sm"></i>
+                                                <p
+                                                    class="text-[9px] font-black text-brand-400 uppercase tracking-wider">
+                                                    Primary Node</p>
+                                            </div>
+                                            <p
+                                                class="font-bold text-brand-800 dark:text-brand-300 text-sm truncate tracking-tight">
+                                                {{teacher_email }}</p>
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="group/card identity-node relative overflow-hidden p-7 rounded-[2.5rem] transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl hover:shadow-brand-500/10">
+                                        <div
+                                            class="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover/card:bg-brand-500/10 transition-all">
+                                        </div>
+                                        <div class="relative">
+                                            <div class="flex items-center gap-2 mb-3">
+                                                <i class="fa-solid fa-building-columns text-brand-500 text-sm"></i>
+                                                <p
+                                                    class="text-[9px] font-black text-brand-400 uppercase tracking-wider">
+                                                    Parent Campus</p>
+                                            </div>
+                                            <p
+                                                class="font-black text-brand-800 dark:text-brand-300 text-lg uppercase tracking-tight">
+                                                {{institution_name }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div
+                                class="pt-10 flex flex-col md:flex-row justify-between items-center gap-6 border-t border-slate-200/50 dark:border-white/10">
+                                <a href="{% url 'student_dashboard' %}"
+                                    class="group/btn flex items-center gap-3 px-6 py-4 rounded-2xl bg-slate-100/50 dark:bg-white/5 hover:bg-rose-500/10 dark:hover:bg-rose-500/10 border border-slate-200/50 dark:border-white/10 hover:border-rose-500/30 transition-all duration-300">
+                                    <i
+                                        class="fa-solid fa-arrow-left-long text-slate-400 group-hover/btn:text-rose-500 transition-colors"></i>
+                                    <span
+                                        class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] group-hover/btn:text-rose-500 transition-colors">Abort
+                                        Operation</span>
+                                </a>
+                                <button type="submit" id="submit-btn" disabled
+                                    class="group/btn relative w-full md:w-auto px-12 py-5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl shadow-brand-500/30 hover:shadow-brand-500/50 transition-all duration-300 active:scale-95 opacity-50 cursor-not-allowed overflow-hidden">
+                                    <div
+                                        class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700">
+                                    </div>
+                                    <span class="relative flex items-center gap-3">
+                                        <i class="fa-solid fa-fingerprint"></i>
+                                        Commit Identity Sync
+                                    </span>
+                                </button>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+                <div class="h-10"></div>
+            </div>
+            {% if messages %}
+<div id="notification-container" class="fixed top-6 right-6 z-[100] w-full max-w-md flex flex-col gap-3 pointer-events-none">
+    {% for message in messages %}
+    <div class="notification-toast mx-4 p-4 rounded-3xl backdrop-blur-xl border flex items-center gap-4 shadow-2xl transition-all duration-500 pointer-events-auto animate-in fade-in slide-in-from-right-10
+            {% if message.tags == 'success' %}
+                bg-emerald-500/10 border-emerald-500/20 text-emerald-500
+            {% else %}
+                bg-rose-500/10 border-rose-500/20 text-rose-500
+            {% endif %}">
+        
+        <div class="w-10 h-10 rounded-2xl bg-current/10 flex items-center justify-center shrink-0">
+            {% if message.tags == 'success' %}
+                <i class="fa-solid fa-check-double text-lg"></i>
+            {% else %}
+                <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+            {% endif %}
+        </div>
+
+        <div class="flex-1">
+            <p class="text-[10px] font-black uppercase tracking-widest opacity-60">System Notification</p>
+            <p class="font-bold text-sm">{{ message }}</p>
+        </div>
+
+        <button onclick="dismissNotification(this.parentElement)"
+            class="p-2 hover:bg-current/10 rounded-xl transition-colors">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+    {% endfor %}
+    {% endif %}
+        </main>
+    </div>
+
+    <script>
+        const spotlight = document.getElementById('spotlight');
+        const sidebar = document.getElementById('sidebar');
+        const hamburgerButton = document.getElementById('hamburger-button');
+        const closeSidebar = document.getElementById('close-sidebar');
+        const themeBtn = document.getElementById('theme-switch');
+        const themeIcon = document.getElementById('theme-icon');
+
+        window.addEventListener('mousemove', e => {
+            spotlight.style.setProperty('--x', `${e.clientX}px`);
+            spotlight.style.setProperty('--y', `${e.clientY}px`);
+        });
+
+        hamburgerButton.addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+        closeSidebar.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+
+        function updateIcon() {
+            const isDark = document.documentElement.classList.contains('dark');
+            themeIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+        updateIcon();
+
+        themeBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+            updateIcon();
+        });
+
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('toggle-icon');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        }
+
+        function checkPassword(val) {
+            const requirements = {
+                'v-len': val.length >= 6,
+                'v-up': /[A-Z]/.test(val),
+                'v-lower': /[a-z]/.test(val),
+                'v-num': /[0-9]/.test(val),
+                'v-spl': /[!@#$%^&*(),.?":{}|<>]/.test(val)
+            };
+
+            let allMet = true;
+            for (const [id, met] of Object.entries(requirements)) {
+                const el = document.getElementById(id);
+                if (met) {
+                    el.classList.remove('bg-rose-500/5', 'border-rose-500/10', 'text-rose-500');
+                    el.classList.add('bg-emerald-500/5', 'border-emerald-500/10', 'text-emerald-500');
+                } else {
+                    el.classList.remove('bg-emerald-500/5', 'border-emerald-500/10', 'text-emerald-500');
+                    el.classList.add('bg-rose-500/5', 'border-rose-500/10', 'text-rose-500');
+                    allMet = false;
+                }
+            }
+
+            const btn = document.getElementById('submit-btn');
+            if (allMet) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // Initialize validation on load if server returns a value
+        window.addEventListener('DOMContentLoaded', () => {
+            const passInput = document.getElementById('password');
+            if (passInput.value) {
+                checkPassword(passInput.value);
+            }
+        });
+
+        function dismissNotification(el) {
+        // Add exit animations
+        el.classList.add('opacity-0', 'translate-x-full', 'scale-95');
+        
+        // Remove from DOM after animation finishes
+        setTimeout(() => {
+            el.remove();
+        }, 500);
+    }
+
+    // Auto-dismiss logic
+    document.addEventListener('DOMContentLoaded', () => {
+        const notifications = document.querySelectorAll('.notification-toast');
+        
+        notifications.forEach((notification) => {
+            // Set timeout for 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    dismissNotification(notification);
+                }
+            }, 2000);
+        });
+    });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-link.active');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+
+</html>

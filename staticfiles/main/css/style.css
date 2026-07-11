@@ -1,0 +1,49 @@
+#message-container {
+    overflow-y: scroll;
+}
+
+#message-container::-webkit-scrollbar {
+    width: 5px;
+    height: 0;
+}
+
+/* Style the scrollbar itself */
+#message-container::-webkit-scrollbar {
+    width: 5px; /* Width of the vertical scrollbar */
+    height: 5px; /* Height of the horizontal scrollbar */
+}
+
+/* Style the track (the area the scrollbar thumb moves within) */
+::-webkit-scrollbar-track {
+    border-radius: 10px;
+}
+
+/* Style the thumb (the draggable part of the scrollbar) */
+::-webkit-scrollbar-thumb {
+    background-color: #a955f772;
+    border-radius: 10px;
+}
+
+#scrollbar-off::-webkit-scrollbar {
+    display: none;
+}
+
+.main-screen{
+    height: 400px !important;
+}
+
+aside{
+    height: 90vh !important;
+}
+#content-wrapper{
+    overflow-y: auto;
+    height: 600px !important;
+}
+
+#content-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+input[type="radio"] {
+    accent-color: rgb(169, 49, 255);
+}

@@ -1,0 +1,2063 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduke | Student Registry</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+                        accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b', emerald: '#10b981' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            letter-spacing: -0.01em;
+            background-color: #f8fafc;
+        }
+
+        .dark body {
+            background-color: #020617;
+        }
+
+        #spotlight {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.12) 0%, transparent 40%);
+            z-index: 1;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 0;
+            opacity: 0.4;
+            animation: float 20s infinite alternate;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(80px, 40px);
+            }
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .nav-item-link {
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .nav-item-link.active {
+            color: #a78bfa !important;
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+        }
+
+        .nav-item-link.active::before {
+            content: '';
+            box-shadow: 0 0 15px #d946ef;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* Print Enhancements */
+        @media print {
+            @page {
+                size: A4;
+                margin: 15mm;
+            }
+
+            html,
+            body {
+                height: auto !important;
+                overflow: visible !important;
+                position: static !important;
+                background: white !important;
+                color: black !important;
+            }
+
+            /* Ensure main content containers are visible */
+            .relative.z-10,
+            main,
+            #content-scroll-container,
+            .glass-card {
+                display: block !important;
+                position: static !important;
+                overflow: visible !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                box-shadow: none !important;
+                backdrop-filter: none !important;
+                border: none !important;
+            }
+
+            /* Specifically force the table wrapper to show */
+            /*.md\:block.hidden {
+                display: block !important;
+            }*/
+
+
+            /* Print-only section visibility */
+            .print-only {
+                display: block !important;
+            }
+
+            .print-only-cell {
+                display: table-cell !important;
+            }
+
+            .print-header {
+                display: block !important;
+                text-align: center !important;
+                border-bottom: 1px solid #333 !important;
+                padding-bottom: 15px !important;
+                margin-bottom: 20px !important;
+            }
+
+            /* Table Formatting */
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 10pt !important;
+                table-layout: auto !important;
+            }
+
+            th,
+            td {
+                display: table-cell !important;
+                border: 1px solid #ddd !important;
+                padding: 10px 8px !important;
+                color: black !important;
+                text-align: left !important;
+            }
+
+            th {
+                background-color: #f1f5f9 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                font-weight: 800 !important;
+                text-transform: uppercase !important;
+            }
+
+            .student-row {
+                background: white !important;
+                break-inside: avoid !important;
+                display: table-row !important;
+            }
+
+            /* Force color styles to show in print */
+            .text-brand-600,
+            .text-brand-500,
+            .text-indigo-600 {
+                color: #4f46e5 !important;
+            }
+
+            /* Clean up backgrounds for print */
+            td span,
+            td div {
+                background: transparent !important;
+                padding: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                color: black !important;
+            }
+
+            .progress-bar,
+            .animate-pulse {
+                display: none !important;
+            }
+
+            #printFilterSummary {
+                background: transparent !important;
+                border-top: 1px solid #999 !important;
+                margin-top: 15px !important;
+                padding-top: 10px !important;
+                font-size: 11pt !important;
+            }
+
+            /* Hiding rules MUST come last to ensure they win over table-cell rules */
+            #sidebar,
+            #hamburger-button,
+            #spotlight,
+            .orb,
+            header,
+            nav,
+            #student-form,
+            #import-section,
+            #edit-student-section,
+            .data-protocol-section,
+            .creation-grid,
+            .message-toast,
+            .no-print,
+            th.no-print,
+            td.no-print,
+            button,
+            select,
+            input,
+            .md\:table-cell.no-print,
+            td.no-print,
+            th.no-print {
+                display: none !important;
+            }
+
+            .print-only-cell {
+                display: table-cell !important;
+            }
+        }
+
+        /* Screen-only rules */
+        @media screen {
+
+            .print-only,
+            .print-only-cell {
+                display: none !important;
+            }
+        }
+
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-sidebar {
+            background: rgba(10, 10, 20, 0.95);
+            backdrop-filter: blur(30px);
+            border-right: 1px solid rgba(139, 92, 246, 0.1);
+        }
+
+        .django-input {
+            width: 100%;
+            padding: 0.75rem 1.25rem;
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            background: white;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .dark .django-input {
+            background: rgba(30, 41, 59, 0.5);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #8b5cf633;
+            border-radius: 10px;
+        }
+
+        /* Modal Styles */
+        .modal-backdrop {
+            background: rgba(2, 6, 23, 0.7);
+            backdrop-filter: blur(8px);
+        }
+
+        /* Red Toast Override */
+        .toast-rose {
+            border-left: 4px solid #f43f5e !important;
+        }
+
+        .toast-rose .toast-icon {
+            background: rgba(244, 63, 94, 0.1) !important;
+            color: #f43f5e !important;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            /* IE and Edge */
+            scrollbar-width: none;
+            /* Firefox */
+        }
+
+        /* Custom scrollbar for messages container */
+        #messages-wrapper::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #messages-wrapper::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.1);
+            border-radius: 4px;
+            box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.1);
+        }
+
+        #messages-wrapper::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, rgba(148, 163, 184, 0.6) 0%, rgba(100, 116, 139, 0.6) 100%);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        #messages-wrapper::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, rgba(148, 163, 184, 0.8) 0%, rgba(100, 116, 139, 0.8) 100%);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Firefox scrollbar for messages */
+        #messages-wrapper {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148, 163, 184, 0.6) rgba(15, 23, 42, 0.1);
+        }
+
+        /* Enhanced custom scrollbar for general use */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.05);
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(100, 116, 139, 0.3);
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(100, 116, 139, 0.5);
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+    <div id="spotlight"></div>
+
+    <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+
+        <aside id="sidebar"
+            class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-[100dvh] lg:h-full">
+
+            <div
+                class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5 bg-[#0a0a14]/80 backdrop-blur-xl">
+
+                <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+                    <div class="flex items-center gap-3 group cursor-pointer">
+                        <div
+                            class="w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 dark:border-white/10 bg-white/10 dark:bg-white/5 group-hover:rotate-12 transition-transform animate-pulse bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 bg-[length:200%_200%]">
+                            <img src="{% static 'main/images/logobase_white.png' %}" alt="Eduke Logo"
+                                class="w-6 h-6 object-contain animate-color-cycle">
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black tracking-tighter text-white uppercase text-nowrap">
+                                Eduke<span class="text-accent-fuchsia">.</span>
+                            </h2>
+                            <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Portal</p>
+                        </div>
+                    </div>
+
+                    <button id="close-sidebar"
+                        class="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white transition-all">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <nav class="flex-grow px-4 space-y-4 overflow-y-auto no-scrollbar py-2">
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Command</p>
+                        <div class="space-y-1">
+
+                            <a href="{% url 'admin_dashboard' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'admin_dashboard' %} 
+                    active bg-brand-500/10 border border-brand-500/20 text-white 
+                {% else %} 
+                    text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+                {% endif %}">
+
+
+                                <i
+                                    class="fa-solid fa-layer-group text-base {% if request.resolver_match.url_name == 'admin_dashboard' %} text-brand-400 {% else %} group-hover:text-brand-400 {% endif %}"></i>
+                                <span class="font-bold text-sm">Dashboard</span>
+                            </a>
+
+                            <a href="{% url 'admin_students' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                        {% if request.resolver_match.url_name == 'admin_students' %} 
+                            bg-accent-fuchsia/10 border border-accent-fuchsia/20 text-white 
+                        {% else %} 
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+                        {% endif %}">
+
+                                {% if request.resolver_match.url_name == 'admin_students' %}
+                                <span
+                                    class="absolute left-2 w-1 h-4 bg-accent-fuchsia rounded-full shadow-[0_0_10px_#d946ef]"></span>
+                                {% endif %}
+
+                                <i
+                                    class="fa-solid fa-user-shield text-base {% if request.resolver_match.url_name == 'admin_students' %} text-accent-fuchsia {% else %} group-hover:text-accent-fuchsia {% endif %}"></i>
+                                <span class="font-bold text-sm">Students</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Operations
+                        </p>
+                        <div class="space-y-1">
+
+                            <a href="{% url 'admin_classes' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                        {% if request.resolver_match.url_name == 'admin_classes' %} 
+                            bg-indigo-500/10 border border-indigo-500/20 text-white 
+                        {% else %} 
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+                        {% endif %}">
+
+                                {% if request.resolver_match.url_name == 'admin_classes' %}
+                                <span
+                                    class="absolute left-2 w-1 h-4 bg-indigo-500 rounded-full shadow-[0_0_10px_#6366f1]"></span>
+                                {% endif %}
+
+                                <i
+                                    class="fa-solid fa-chalkboard-user text-base {% if request.resolver_match.url_name == 'admin_classes' %} text-indigo-400 {% else %} group-hover:text-indigo-400 {% endif %}"></i>
+                                <span class="font-bold text-sm">Manage Classes</span>
+                            </a>
+
+                            <a href="{% url 'admin_subjects' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                        {% if request.resolver_match.url_name == 'admin_subjects' %} 
+                            bg-emerald-500/10 border border-emerald-500/20 text-white 
+                        {% else %} 
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+                        {% endif %}">
+
+                                {% if request.resolver_match.url_name == 'admin_subjects' %}
+                                <span
+                                    class="absolute left-2 w-1 h-4 bg-emerald-500 rounded-full shadow-[0_0_10px_#10b981]"></span>
+                                {% endif %}
+
+                                <i
+                                    class="fa-solid fa-book-open-reader text-base {% if request.resolver_match.url_name == 'admin_subjects' %} text-emerald-400 {% else %} group-hover:text-emerald-400 {% endif %}"></i>
+                                <span class="font-bold text-sm">Subject Head</span>
+                            </a>
+
+                            <a href="{% url 'admin_reports' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+    {% if request.resolver_match.url_name == 'admin_reports' %} 
+        bg-indigo-500/10 border border-indigo-500/20 text-white 
+    {% else %} 
+        text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+    {% endif %}">
+
+                                {% if request.resolver_match.url_name == 'admin_reports' %}
+                                <span
+                                    class="absolute left-2 w-1 h-4 bg-indigo-500 rounded-full shadow-[0_0_10px_#6366f1]"></span>
+                                {% endif %}
+
+                                <i
+                                    class="fa-solid fa-chart-pie text-base 
+        {% if request.resolver_match.url_name == 'admin_reports' %} text-indigo-400 {% else %} group-hover:text-indigo-400 {% endif %}"></i>
+
+                                <span class="font-bold text-sm">Reports Hub</span>
+                            </a>
+
+
+                        </div>
+                    </div>
+
+
+
+                    <div class="pt-2">
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">User</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'admin_profile' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                        {% if request.resolver_match.url_name == 'admin_profile' %} 
+                            bg-brand-500/10 border border-brand-500/20 text-white 
+                        {% else %} 
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+                        {% endif %}">
+
+                                {% if request.resolver_match.url_name == 'admin_profile' %}
+                                <span
+                                    class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>
+                                {% endif %}
+
+                                <i
+                                    class="fa-solid fa-circle-user text-base {% if request.resolver_match.url_name == 'admin_profile' %} text-brand-400 {% else %} group-hover:text-brand-400 {% endif %}"></i>
+                                <span class="font-bold text-sm">{{ institution.institution_abbreviation|default:"User"}}
+                                    Profile</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+
+                <div class="p-4 shrink-0 mt-auto lg:mb-0">
+                    <div
+                        class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3 transition-all hover:border-white/20">
+                        <div class="flex items-center gap-3">
+                            <div class="relative flex-shrink-0">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 shadow-lg">
+                                    <span class="text-[11px] font-black text-white uppercase">
+                                        {{ institution.institution_abbreviation|default:"EDU" }}
+                                    </span>
+                                </div>
+                                <div
+                                    class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-[#0a0a14] rounded-full">
+                                </div>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="text-[11px] font-black text-white truncate tracking-tight mb-0.5">
+                                    {{ "Eduke Institution" }}
+                                </h4>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none">
+                                    Admin</p>
+                            </div>
+
+                        </div>
+
+                        <div class="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+
+                        <a href="{% url 'logout' %}"
+                            class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 hover:border-rose-500 transition-all duration-300">
+                            <span
+                                class="text-[9px] font-black uppercase tracking-widest text-rose-400 group-hover/btn:text-white">Logout</span>
+                            <i
+                                class="fa-solid fa-power-off text-[10px] text-rose-500 group-hover/btn:text-white transition-colors"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <header class="h-20 flex items-center justify-between px-8 shrink-0">
+                <div class="flex items-center gap-4">
+                    <button id="hamburger-button"
+                        class="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl glass-card text-brand-500 shadow-sm">
+                        <i class="fa-solid fa-bars-staggered"></i>
+                    </button>
+                    <h1 class="text-xl font-black dark:text-white uppercase tracking-tighter leading-none">Registry
+                        <span class="text-brand-500 italic">Interface</span>
+                    </h1>
+                </div>
+                <button id="theme-switch"
+                    class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center hover:scale-110 transition-all text-brand-600 dark:text-amber-400 shadow-md">
+                    <i id="theme-icon" class="fa-solid fa-moon"></i>
+                </button>
+            </header>
+
+            <div id="content-scroll-container"
+                class="flex-1 overflow-y-auto px-4 lg:px-8 pb-10 space-y-6 custom-scroll print-container">
+                <div
+                    class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-5xl mx-auto p-4 pt-10 no-print creation-grid">
+                    <button onclick="toggleSection('student-form')"
+                        class="group relative flex items-center gap-5 p-5 rounded-[1.75rem] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 text-left transition-all duration-500 hover:border-emerald-500/50 hover:shadow-[0_15px_40px_-12px_rgba(16,185,129,0.2)] overflow-hidden">
+
+                        <div
+                            class="absolute -inset-px rounded-[1.75rem] bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                        </div>
+
+                        <div class="relative flex-shrink-0">
+                            <div
+                                class="absolute inset-0 bg-emerald-400 blur-xl opacity-0 group-hover:opacity-30 group-hover:animate-pulse transition-opacity duration-700">
+                            </div>
+                            <div
+                                class="relative w-14 h-14 rounded-2xl bg-slate-50 dark:bg-emerald-500/10 border border-slate-200 dark:border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white group-hover:scale-110 group-hover:-rotate-6 transition-all duration-500 shadow-inner">
+                                <i class="fa-solid fa-plus text-xl"></i>
+                            </div>
+                        </div>
+
+                        <div class="relative z-10 flex-grow">
+                            <h3
+                                class="font-black text-slate-900 dark:text-white text-lg tracking-tight leading-none group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                                Manual Creation
+                            </h3>
+                            <p
+                                class="text-slate-500 dark:text-slate-400 text-xs font-medium mt-1 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors">
+                                Add a single class record.
+                            </p>
+
+                            <div
+                                class="flex items-center gap-2 mt-2 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] uppercase tracking-wider">
+                                <span class="translate-x-0 group-hover:translate-x-1 transition-transform">Get
+                                    Started</span>
+                                <i
+                                    class="fa-solid fa-arrow-right opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300"></i>
+                            </div>
+                        </div>
+
+                        <div
+                            class="absolute -top-2 -right-2 p-4 opacity-[0.03] group-hover:opacity-[0.08] group-hover:rotate-12 transition-all duration-1000">
+                            <i class="fa-solid fa-pen-nib text-6xl text-emerald-900 dark:text-white"></i>
+                        </div>
+                    </button>
+
+                    <button onclick="toggleSection('import-section')"
+                        class="group relative flex items-center gap-5 p-5 rounded-[1.75rem] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-white/5 text-left transition-all duration-500 hover:border-indigo-500/50 hover:shadow-[0_15px_40px_-12px_rgba(99,102,241,0.25)] overflow-hidden">
+
+                        <div
+                            class="absolute -inset-px rounded-[1.75rem] bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                        </div>
+
+                        <div class="relative flex-shrink-0">
+                            <div
+                                class="absolute inset-0 bg-indigo-400 blur-xl opacity-0 group-hover:opacity-30 group-hover:animate-pulse transition-opacity duration-700">
+                            </div>
+                            <div
+                                class="relative w-14 h-14 rounded-2xl bg-slate-50 dark:bg-indigo-500/10 border border-slate-200 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-inner">
+                                <i class="fa-solid fa-file-import text-xl"></i>
+                            </div>
+                        </div>
+
+                        <div class="relative z-10 flex-grow">
+                            <h3
+                                class="font-black text-slate-900 dark:text-white text-lg tracking-tight leading-none group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                Bulk Synchronization
+                            </h3>
+                            <p
+                                class="text-slate-500 dark:text-slate-400 text-xs font-medium mt-1 group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors">
+                                Import via CSV/Excel.
+                            </p>
+
+                            <div
+                                class="flex items-center gap-2 mt-2 text-indigo-600 dark:text-indigo-400 font-bold text-[10px] uppercase tracking-wider">
+                                <span class="translate-x-0 group-hover:translate-x-1 transition-transform">Upload
+                                    Data</span>
+                                <i
+                                    class="fa-solid fa-arrow-right opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300"></i>
+                            </div>
+                        </div>
+
+                        <div
+                            class="absolute -top-2 -right-2 p-4 opacity-[0.03] group-hover:opacity-[0.08] group-hover:-rotate-12 transition-all duration-1000">
+                            <i class="fa-solid fa-database text-6xl text-indigo-900 dark:text-white"></i>
+                        </div>
+                    </button>
+                </div>
+
+
+                <div id="student-form" class="hidden mb-10 transition-all duration-500">
+                    <div class="glass-card rounded-[2.5rem] p-6 lg:p-10 border-2 border-brand-500/20 shadow-2xl">
+                        <div class="flex items-center justify-between mb-8">
+                            <h3 class="text-xs font-black text-brand-600 uppercase tracking-[0.3em]">Identity
+                                Protocol
+                            </h3>
+                            <button onclick="toggleSection('student-form')"
+                                class="text-slate-400 hover:text-rose-500"><i class="fa-solid fa-times"></i></button>
+                        </div>
+                        <form method="post" id="main-student-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {% csrf_token %}
+                            <input type="hidden" name="manual_entry" value="true">
+                            <div class="space-y-3 manual-input">
+                                <label
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Student
+                                    Name</label>
+                                {{ form.name }}
+                            </div>
+                            <div class="space-y-3 manual-input">
+                                <label
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Student
+                                    Email</label>
+                                {{ form.email }}
+                            </div>
+                            <div class="space-y-3 manual-input">
+                                <label
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Parent
+                                    Email</label>
+                                {{ form.parent_email }}
+                            </div>
+                            <div class="space-y-3 manual-input">
+                                <label
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Class</label>
+                                {{ form.class_obj }}
+                            </div>
+                            <div class="space-y-3 manual-input relative">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Roll
+                                    Number</label>
+                                {{ form.roll_no }}
+                                <div id="roll-no-loader" class="absolute right-4 bottom-3 hidden">
+                                    <i class="fa-solid fa-circle-notch fa-spin text-brand-500"></i>
+                                </div>
+                            </div>
+                            <div class="space-y-3 manual-input">
+                                <label
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Password</label>
+                                {{ form.password }}
+                                <div id="validation-grid" class="grid grid-cols-2 gap-1 mt-3 ml-2">
+                                    <div id="v-len" class="text-[9px] font-black uppercase text-rose-500">● 6+ Chars
+                                    </div>
+                                    <div id="v-up" class="text-[9px] font-black uppercase text-rose-500">● 1
+                                        Uppercase</div>
+                                    <div id="v-low" class="text-[9px] font-black uppercase text-rose-500">● 1
+                                        Lowercase</div>
+                                    <div id="v-num" class="text-[9px] font-black uppercase text-rose-500">● 1 Digit
+                                    </div>
+                                    <div id="v-spl" class="text-[9px] font-black uppercase text-rose-500">● 1
+                                        Special</div>
+                                </div>
+                            </div>
+                            <button type="submit" id="submit-btn" disabled
+                                class="md:col-span-2 py-5 bg-slate-200 dark:bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase tracking-widest cursor-not-allowed">Secure
+                                Credentials Required <i class="fa-solid fa-lock ml-2"></i></button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Edit Student Modal -->
+                <div id="edit-student-modal"
+                    class="fixed inset-0 z-[100] hidden items-center justify-center p-4 modal-backdrop">
+                    <div id="edit-modal-card"
+                        class="glass-card rounded-[2.5rem] p-6 lg:p-10 border-2 border-indigo-500/20 shadow-[0_32px_64px_-12px_rgba(99,102,241,0.3)] w-full max-w-2xl transform transition-all duration-500 scale-95 opacity-0">
+                        <div class="flex items-center justify-between mb-8">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                                    <i class="fa-solid fa-user-gear"></i>
+                                </div>
+                                <h3 class="text-xs font-black text-indigo-600 uppercase tracking-[0.3em]">Modify
+                                    Registry Record</h3>
+                            </div>
+                            <button onclick="closeEditModal()"
+                                class="w-10 h-10 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-all">
+                                <i class="fa-solid fa-times"></i>
+                            </button>
+                        </div>
+                        <form method="post" id="edit-student-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {% csrf_token %}
+                            <div class="space-y-3 manual-input">
+                                <label
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Student
+                                    Name</label>
+                                <input type="text" name="name" id="edit_name" class="django-input" required>
+                            </div>
+                            <div class="space-y-3 manual-input">
+                                <label
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Student
+                                    Email</label>
+                                <input type="email" name="email" id="edit_email" class="django-input" required>
+                            </div>
+                            <div class="space-y-3 manual-input">
+                                <label
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Parent
+                                    Email</label>
+                                <input type="email" name="parent_email" id="edit_parent_email" class="django-input"
+                                    required>
+                            </div>
+                            <div class="space-y-3 manual-input">
+                                <label
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Class</label>
+                                <select name="class_obj" id="edit_class_id" class="django-input" required>
+                                    <option value="">Select Class</option>
+                                    {% for c in classes %}
+                                    <option value="{{ c.id }}">{{ c.class_abbreviation }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="space-y-3 manual-input relative">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Roll
+                                    Number</label>
+                                <input type="text" name="roll_no" id="edit_roll_no" class="django-input" required>
+                            </div>
+                            <div class="space-y-3 manual-input">
+                                <label
+                                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Password</label>
+                                <input type="password" name="password" id="edit_password" class="django-input" required>
+                                <div id="edit-validation-grid" class="grid grid-cols-2 gap-1 mt-3 ml-2 hidden">
+                                    <div id="ev-len" class="text-[9px] font-black uppercase text-rose-500">● 6+ Chars
+                                    </div>
+                                    <div id="ev-up" class="text-[9px] font-black uppercase text-rose-500">● 1 Uppercase
+                                    </div>
+                                    <div id="ev-low" class="text-[9px] font-black uppercase text-rose-500">● 1 Lowercase
+                                    </div>
+                                    <div id="ev-num" class="text-[9px] font-black uppercase text-rose-500">● 1 Digit
+                                    </div>
+                                    <div id="ev-spl" class="text-[9px] font-black uppercase text-rose-500">● 1 Special
+                                    </div>
+                                </div>
+                                <p class="text-[9px] text-slate-400 font-bold ml-2 italic">Note: Updates parent gateway
+                                    access.</p>
+                            </div>
+                            <button type="submit"
+                                class="md:col-span-2 py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-indigo-500/20 transition-all duration-300 hover:translate-y-[-2px] hover:shadow-indigo-500/40">
+                                Synchronize Metadata Updates <i class="fa-solid fa-cloud-arrow-up ml-2"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="import-section" class="hidden mb-10 transition-all duration-500">
+                    <div class="glass-card rounded-[2.5rem] p-6 lg:p-8">
+                        <div class="flex items-center justify-between mb-8">
+                            <h3 class="text-xs font-black text-indigo-600 uppercase tracking-[0.3em]">Bulk
+                                Synchronization</h3>
+                            <button onclick="toggleSection('import-section')"
+                                class="text-slate-400 hover:text-rose-500"><i class="fa-solid fa-times"></i></button>
+                        </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                            <div class="lg:col-span-5">
+                                <form method="POST" action="{% url 'upload_students' %}" enctype="multipart/form-data"
+                                    class="space-y-6">
+                                    {% csrf_token %}
+
+                                    <label
+                                        class="group relative flex flex-col items-center justify-center w-full h-64 border-2 border-indigo-300 dark:border-indigo-500/30 border-dashed rounded-[2.5rem] cursor-pointer bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-900/30 dark:hover:to-purple-900/30 transition-all duration-500 overflow-hidden">
+
+                                        <div
+                                            class="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/10 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+                                        </div>
+
+                                        <div
+                                            class="relative mb-4 transform group-hover:scale-110 group-hover:-translate-y-3 transition-all duration-500">
+                                            <div
+                                                class="absolute inset-0 bg-indigo-400 blur-2xl opacity-0 group-hover:opacity-40 animate-pulse">
+                                            </div>
+                                            <div
+                                                class="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center shadow-2xl group-hover:shadow-indigo-500/50 transition-all duration-500">
+                                                <i
+                                                    class="fa-solid fa-cloud-arrow-up text-white text-3xl group-hover:animate-bounce"></i>
+                                            </div>
+                                        </div>
+
+                                        <div class="text-center relative z-10 px-4">
+                                            <p id="file-label"
+                                                class="text-lg font-black text-indigo-900 dark:text-indigo-200 uppercase tracking-tight mb-1">
+                                                Drop Dataset Here
+                                            </p>
+                                            <p class="text-sm font-bold text-slate-500 dark:text-slate-400">
+                                                or click to browse local files
+                                            </p>
+
+                                            <div class="flex items-center justify-center gap-2 mt-4">
+                                                <span
+                                                    class="px-3 py-1 bg-white/80 dark:bg-slate-800 border border-indigo-100 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 rounded-lg text-[10px] font-black shadow-sm">CSV</span>
+                                                <span
+                                                    class="px-3 py-1 bg-white/80 dark:bg-slate-800 border border-emerald-100 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-lg text-[10px] font-black shadow-sm">XLSX</span>
+                                                <span
+                                                    class="px-3 py-1 bg-white/80 dark:bg-slate-800 border border-purple-100 dark:border-purple-500/30 text-purple-600 dark:text-purple-400 rounded-lg text-[10px] font-black shadow-sm">JSON</span>
+                                            </div>
+
+                                            <p id="file-name-display"
+                                                class="mt-4 text-xs font-bold text-emerald-600 dark:text-emerald-400 animate-pulse hidden">
+                                            </p>
+                                        </div>
+
+                                        <div
+                                            class="absolute top-6 right-6 w-12 h-12 border-t-4 border-r-4 border-indigo-200 dark:border-indigo-500/20 rounded-tr-3xl opacity-50 group-hover:opacity-100 transition-all duration-500 group-hover:translate-x-1 group-hover:-translate-y-1">
+                                        </div>
+                                        <div
+                                            class="absolute bottom-6 left-6 w-12 h-12 border-b-4 border-l-4 border-indigo-200 dark:border-indigo-500/20 rounded-bl-3xl opacity-50 group-hover:opacity-100 transition-all duration-500 group-hover:-translate-x-1 group-hover:translate-y-1">
+                                        </div>
+
+                                        <input type="file" name="file" id="file-upload" class="hidden"
+                                            accept=".csv,.xlsx,.json" onchange="displayFileName(this)" />
+                                    </label>
+
+                                    <button type="submit"
+                                        class="group relative w-full py-5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-2xl shadow-indigo-500/30 transition-all duration-300 active:scale-[0.98] overflow-hidden">
+                                        <div
+                                            class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite]">
+                                        </div>
+                                        <span class="relative z-10 flex items-center justify-center gap-3">
+                                            <i
+                                                class="fa-solid fa-bolt-lightning text-lg group-hover:rotate-12 transition-transform"></i>
+                                            Execute Sync
+                                            <i
+                                                class="fa-solid fa-arrow-right transform group-hover:translate-x-2 transition-transform"></i>
+                                        </span>
+                                    </button>
+
+                                    <div class="relative group">
+                                        <div
+                                            class="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[1.5rem] blur opacity-10 group-hover:opacity-30 transition duration-1000">
+                                        </div>
+                                        <a href="{% static 'main/files/student_Upload.xlsx' %}" download
+                                            class="relative flex items-center justify-between w-full px-6 py-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl transition-all duration-300 hover:border-indigo-300 dark:hover:border-indigo-500/50">
+
+                                            <div class="flex items-center gap-4">
+                                                <div
+                                                    class="w-12 h-12 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:from-indigo-500/20 dark:to-purple-500/20 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:rotate-6 transition-transform">
+                                                    <i class="fa-solid fa-file-excel text-xl"></i>
+                                                </div>
+                                                <div class="text-left">
+                                                    <span
+                                                        class="block text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest">Resources</span>
+                                                    <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">
+                                                        Student Upload Template</h3>
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                class="flex items-center gap-4 border-l border-slate-100 dark:border-slate-800 pl-4">
+                                                <div class="text-right">
+                                                    <p class="text-[9px] font-bold text-slate-400 uppercase">Size</p>
+                                                    <p
+                                                        class="text-[10px] font-black text-slate-600 dark:text-slate-300">
+                                                        12.4 KB</p>
+                                                </div>
+                                                <div
+                                                    class="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                                                    <i class="fa-solid fa-download text-xs"></i>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </div>
+                                </form>
+
+
+                            </div>
+                            <div class="lg:col-span-7 space-y-3 no-print data-protocol-section">
+                                <h4 class="text-xs font-black text-brand-600 uppercase mb-4 tracking-widest px-2">Data
+                                    Protocol</h4>
+
+                                <details
+                                    class="faq-details group bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden transition-all duration-300 hover:border-indigo-500/50 dark:hover:border-indigo-500/30">
+                                    <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                        <div class="flex items-center gap-3">
+                                            <i class="fa-solid fa-table-columns text-indigo-500 text-xs"></i>
+                                            <span class="text-sm font-bold text-slate-700 dark:text-slate-200">Required
+                                                Headers</span>
+                                        </div>
+                                        <i
+                                            class="fa-solid fa-chevron-down text-[10px] text-slate-400 group-open:rotate-180 transition-transform duration-300"></i>
+                                    </summary>
+                                    <div
+                                        class="px-5 pb-5 pt-4 border-t border-slate-100 dark:border-white/5 bg-indigo-50/30 dark:bg-indigo-900/10">
+                                        <p class="text-xs text-slate-500 mb-2 uppercase tracking-wider font-bold">
+                                            Standard Column Mapping:</p>
+                                        <div class="flex flex-wrap gap-2">
+                                            <code
+                                                class="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 rounded-lg text-[11px] font-mono text-indigo-700 dark:text-indigo-300 font-bold shadow-sm">Student Name</code>
+                                            <code
+                                                class="px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800 rounded-lg text-[11px] font-mono text-emerald-700 dark:text-emerald-300 font-bold shadow-sm">Email</code>
+                                            <code
+                                                class="px-3 py-1.5 bg-amber-100 dark:bg-amber-900/50 border border-amber-200 dark:border-amber-800 rounded-lg text-[11px] font-mono text-amber-700 dark:text-amber-300 font-bold shadow-sm">Roll Number</code>
+                                            <code
+                                                class="px-3 py-1.5 bg-rose-100 dark:bg-rose-900/50 border border-rose-200 dark:border-rose-800 rounded-lg text-[11px] font-mono text-rose-700 dark:text-rose-300 font-bold shadow-sm">Password</code>
+                                            <code
+                                                class="px-3 py-1.5 bg-purple-100 dark:bg-purple-900/50 border border-purple-200 dark:border-purple-800 rounded-lg text-[11px] font-mono text-purple-700 dark:text-rose-300 font-bold shadow-sm">Class Abbreviation</code>
+
+                                        </div>
+                                    </div>
+                                </details>
+
+                                <details
+                                    class="faq-details group bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden transition-all duration-300 hover:border-emerald-500/50 dark:hover:border-emerald-500/30">
+                                    <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                        <div class="flex items-center gap-3">
+                                            <i class="fa-solid fa-file-code text-emerald-500 text-xs"></i>
+                                            <span class="text-sm font-bold text-slate-700 dark:text-slate-200">File
+                                                Format & Encoding</span>
+                                        </div>
+                                        <i
+                                            class="fa-solid fa-chevron-down text-[10px] text-slate-400 group-open:rotate-180 transition-transform duration-300"></i>
+                                    </summary>
+                                    <div
+                                        class="px-5 pb-5 pt-4 border-t border-slate-100 dark:border-white/5 text-sm text-slate-500 bg-emerald-50/30 dark:bg-emerald-900/10">
+                                        <p>Please ensure your file is saved as <strong
+                                                class="text-emerald-700 dark:text-emerald-300 font-bold">.xlsx</strong>
+                                            or <strong
+                                                class="text-emerald-700 dark:text-emerald-300 font-bold">.csv</strong>.
+                                            Use <span class="underline decoration-emerald-500 font-bold">UTF-8
+                                                encoding</span> to prevent
+                                            character corruption in names or special symbols.</p>
+                                    </div>
+                                </details>
+
+                                <details
+                                    class="faq-details group bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden transition-all duration-300 hover:border-amber-500/50 dark:hover:border-amber-500/30">
+                                    <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                        <div class="flex items-center gap-3">
+                                            <i class="fa-solid fa-circle-check text-amber-500 text-xs"></i>
+                                            <span
+                                                class="text-sm font-bold text-slate-700 dark:text-slate-200">Validation
+                                                Rules</span>
+                                        </div>
+                                        <i
+                                            class="fa-solid fa-chevron-down text-[10px] text-slate-400 group-open:rotate-180 transition-transform duration-300"></i>
+                                    </summary>
+                                    <div
+                                        class="px-5 pb-5 pt-4 border-t border-slate-100 dark:border-white/5 space-y-3 bg-amber-50/30 dark:bg-amber-900/10">
+                                        <div class="flex items-start gap-2 text-xs text-slate-500">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0"></span>
+                                            <span class="text-amber-700 dark:text-amber-300 font-bold">Emails must be
+                                                unique and valid (e.g., name@school.edu).</span>
+                                        </div>
+                                        <div class="flex items-start gap-2 text-xs text-slate-500">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0"></span>
+                                            <span class="text-amber-700 dark:text-amber-300 font-bold">Passwords must be
+                                                at least 6+ characters long, include (1 uppercase, 1
+                                                lowercase, 1 specail char, 1 digit).</span>
+                                        </div>
+                                        <div class="flex items-start gap-2 text-xs text-slate-500">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0"></span>
+                                            <span class="text-amber-700 dark:text-amber-300 font-bold">Your Instituition
+                                                Id:
+                                                {{institution_id}}S (use while creating roll number)
+                                                <p> Eg:{{institution_id}}SMCA25001 </p>
+
+                                            </span>
+                                        </div>
+                                    </div>
+                                </details>
+
+                                <details
+                                    class="faq-details group bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden transition-all duration-300 hover:border-rose-500/50 dark:hover:border-rose-500/30">
+                                    <summary class="flex items-center justify-between p-5 cursor-pointer list-none">
+                                        <div class="flex items-center gap-3">
+                                            <i class="fa-solid fa-triangle-exclamation text-rose-500 text-xs"></i>
+                                            <span class="text-sm font-bold text-slate-700 dark:text-slate-200">System
+                                                Limits</span>
+                                        </div>
+                                        <i
+                                            class="fa-solid fa-chevron-down text-[10px] text-slate-400 group-open:rotate-180 transition-transform duration-300"></i>
+                                    </summary>
+                                    <div
+                                        class="px-5 pb-5 pt-4 border-t border-slate-100 dark:border-white/5 flex justify-between items-center text-xs bg-rose-50/30 dark:bg-rose-900/10">
+                                        <span class="text-rose-700 dark:text-rose-300 font-bold">Maximum Batch
+                                            Size:</span>
+                                        <span
+                                            class="font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/50 border border-rose-200 dark:border-rose-800 px-3 py-1 rounded-lg shadow-sm">500
+                                            Rows / Upload</span>
+                                    </div>
+                                </details>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-[3rem] overflow-hidden shadow-2xl mt-10">
+                    <div
+                        class="relative p-6 md:p-10 border-b border-slate-200/50 dark:border-white/5 bg-white/40 dark:bg-slate-800/40 no-print">
+                        <div class="flex items-center justify-between">
+                            <h2
+                                class="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">
+                                Student <span class="text-brand-500">Registry</span></h2>
+                            <p
+                                class="text-[10px] text-brand-600 dark:text-brand-400 font-black uppercase tracking-widest no-print">
+                                Live: <span id="total-counter">{{ students|length }}</span> Students</p>
+                        </div>
+                    </div>
+
+                    <!-- Print only Header -->
+                    <div class="print-only hidden p-6 print-header">
+                        <div class="text-center mb-4">
+                            <h1 class="text-2xl font-bold text-gray-900">Student Registry</h1>
+                            <p class="text-sm text-gray-600 mt-1">{{ institution.institution_name }} - Student Enrollment List</p>
+                            <p class="text-xs text-gray-500 mt-2">Generated on {% now "d F Y" %}</p>
+                        </div>
+
+                        <div id="printFilterSummary" class="text-sm border-t border-gray-200 pt-2 mt-2">
+                            <p class="text-gray-700">
+                                <span class="font-semibold">Active Filters:</span> 
+                                <span id="summaryContent">No filters applied</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Print Table View -->
+                    <div class="print-only hidden">
+                        <table class="w-full border-collapse mt-8">
+                            <thead>
+                                <tr class="bg-slate-100">
+                                    <th class="border border-slate-300 px-4 py-2 text-left font-bold">S.No</th>
+                                    <th class="border border-slate-300 px-4 py-2 text-left font-bold">Name</th>
+                                    <th class="border border-slate-300 px-4 py-2 text-left font-bold">Email</th>
+                                    <th class="border border-slate-300 px-4 py-2 text-left font-bold">Roll Number</th>
+                                    <th class="border border-slate-300 px-4 py-2 text-left font-bold">Class Division
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in students %}
+                                <tr class="print-table-row">
+                                    <td class="border border-slate-300 px-4 py-2 print-sno">{{ forloop.counter }}</td>
+                                    <td class="border border-slate-300 px-4 py-2">{{ student.1 }}</td>
+                                    <td class="border border-slate-300 px-4 py-2">{{ student.3 }}</td>
+                                    <td class="border border-slate-300 px-4 py-2">{{ student.2 }}</td>
+                                    <td class="border border-slate-300 px-4 py-2">{{ student.4 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+
+
+                    <!-- Search and Filter Controls -->
+                    <div
+                        class="p-6 border-b border-slate-200/30 dark:border-white/10 bg-white/30 dark:bg-slate-800/30 no-print">
+                        <div class="flex flex-col md:flex-row md:items-center gap-4">
+                            <div class="relative flex-1">
+                                <i
+                                    class="fa-solid fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                                <input type="text" id="searchInput"
+                                    placeholder="Search students by name, email, roll number..."
+                                    class="w-full pl-12 pr-4 py-3 bg-white/80 dark:bg-slate-700/80 border border-slate-200/50 dark:border-white/10 rounded-2xl font-black text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+                            </div>
+                            <div class="flex gap-3">
+                                <select id="classFilter"
+                                    class="px-4 py-3 bg-white/80 dark:bg-slate-700/80 border border-slate-200/50 dark:border-white/10 rounded-2xl font-black text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                                    <option value="">All Classes</option>
+                                    <!-- Options will be populated dynamically -->
+                                </select>
+                                <button id="clearFilters"
+                                    class="px-4 py-3 bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white rounded-2xl font-black text-sm transition-all duration-300 border border-rose-500/20">
+                                    Clear Filters
+                                </button>
+                                <button onclick="window.print()"
+                                    class="px-4 py-3 bg-brand-500/10 hover:bg-brand-500 text-brand-600 hover:text-white rounded-2xl font-black text-sm transition-all duration-300 border border-brand-500/20"
+                                    title="Print Registry">
+                                    <i class="fa-solid fa-print"></i>
+                                </button>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hidden md:block no-print">
+                        <table class="w-full text-left border-collapse shadow-sm">
+                            <thead>
+                                <tr
+                                    class="bg-gradient-to-r from-slate-200/60 to-slate-300/40 dark:from-slate-700/50 dark:to-slate-800/50 border-y border-slate-300/50 dark:border-white/10 shadow-inner">
+                                    <th
+                                        class="pl-10 pr-6 py-5 text-[11px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em]">
+                                        Name</th>
+                                    <th
+                                        class="px-6 py-5 text-[11px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em]">
+                                        Email</th>
+                                    <th
+                                        class="px-6 py-5 text-[11px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em]">
+                                        Roll Number</th>
+                                    <th
+                                        class="px-6 py-5 text-[11px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em]">
+                                        Class Division</th>
+                                    <th
+                                        class="px-6 py-5 text-[11px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em] text-right no-print">
+                                        Operations</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200/30 dark:divide-white/5 block md:table-row-group">
+                                {% for student in students %}
+                                <tr
+                                    class="data-table-row student-row group/row hover:bg-white/60 dark:hover:bg-brand-500/10 transition-all duration-300 border-b border-slate-200/20 dark:border-white/5 hover:shadow-sm hover:shadow-brand-500/10">
+                                    <td class="pl-10 pr-6 py-6 block md:table-cell">
+                                        <div class="flex items-center gap-5">
+                                            <div
+                                                class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-500 to-indigo-600 flex items-center justify-center text-white font-black text-lg">
+                                                {{ student.1|slice:":1"|upper }}
+                                            </div>
+                                            <div>
+                                                <p class="font-black text-slate-900 dark:text-white text-base">
+                                                    {{student.1 }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td class="px-6 py-6 block md:table-cell">
+                                        <p class="text-[11px] font-bold text-slate-400 font-mono italic">
+                                            {{student.3 }}</p>
+                                    </td>
+
+                                    <td class="px-6 py-6 block md:table-cell">
+                                        <span
+                                            class="px-4 py-2 bg-slate-100 dark:bg-white/5 rounded-xl text-xs font-black font-mono text-brand-600">
+                                            #{{student.2 }}</span>
+                                    </td>
+
+                                    <td class="px-6 py-6 block md:table-cell">
+                                        <div
+                                            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-[10px] font-black text-indigo-600 uppercase">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                                            {{ student.4 }}
+                                        </div>
+                                    </td>
+
+                                    <td class="pl-6 pr-10 py-6 text-right block md:table-cell no-print">
+                                        <div class="flex items-center justify-end gap-3"
+                                            onclick="event.stopPropagation()">
+                                            <button
+                                                onclick="openEditSection('{{ student.0 }}', '{{ student.1|escapejs }}', '{{ student.2|escapejs }}', '{{ student.3|escapejs }}', '{{ student.8|escapejs }}', '{{ student.6 }}', '{{ student.7|escapejs }}')"
+                                                class="h-10 w-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
+                                                <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                            </button>
+                                            <a href="{% url 'admin_student_performance' student.0 %}"
+                                                class="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all shadow-sm">
+                                                <i class="fa-solid fa-user text-xs"></i>
+                                            </a>
+                                            <button
+                                                onclick="openDeleteModal('{{ student.0 }}', '{{ student.1|escapejs }}')"
+                                                class="h-10 w-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 hover:bg-rose-500 hover:text-white transition-all">
+                                                <i class="fa-solid fa-trash-can"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="px-10 py-12 text-center text-slate-400 dark:text-slate-500">
+                                        <div class="flex flex-col items-center gap-4">
+                                            <i class="fa-solid fa-users-slash text-4xl opacity-30"></i>
+                                            <p class="text-lg font-bold">No students registered yet</p>
+                                            <p class="text-sm">Add students using the forms above to get started</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mobile Search and Filter Controls -->
+                    <div class="md:hidden p-5 space-y-4 no-print">
+                        <div class="relative">
+                            <i
+                                class="fa-solid fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="mobileSearchInput" placeholder="Search students..."
+                                class="w-full pl-12 pr-4 py-3 bg-white/80 dark:bg-slate-700/80 border border-slate-200/50 dark:border-white/10 rounded-2xl font-black text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        </div>
+                        <div class="flex gap-2">
+                            <select id="mobileClassFilter"
+                                class="flex-1 px-4 py-3 bg-white/80 dark:bg-slate-700/80 border border-slate-200/50 dark:border-white/10 rounded-2xl font-black text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                                <option value="">All Classes</option>
+                                <!-- Options will be populated dynamically -->
+                            </select>
+                            <button id="mobileClearFilters"
+                                class="px-4 py-3 bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white rounded-2xl font-black text-xs transition-all duration-300 border border-rose-500/20">
+                                Clear
+                            </button>
+                            <button onclick="window.print()"
+                                class="px-4 py-3 bg-brand-500/10 hover:bg-brand-500 text-brand-600 hover:text-white rounded-2xl font-black text-sm transition-all duration-300 border border-brand-500/20">
+                                <i class="fa-solid fa-print"></i>
+                            </button>
+
+                        </div>
+                    </div>
+
+                    <div class="md:hidden p-5 space-y-4">
+                        {% for student in students %}
+                        <div
+                            class="p-5 rounded-[2rem] bg-gradient-to-br from-white to-slate-50 dark:from-slate-800/60 dark:to-slate-900/60 border border-slate-200/50 dark:border-white/10 shadow-lg shadow-slate-500/10 hover:shadow-brand-500/10 transition-all duration-300 no-print">
+                            <div class="flex justify-between items-center mb-6">
+                                <div
+                                    class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-500 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg">
+                                    {{ student.1|slice:":1"|upper }}
+                                </div>
+                                <div>
+                                    <p class="font-black text-slate-900 dark:text-white text-base">{{ student.1 }}
+                                    </p>
+                                    <p class="text-[11px] font-bold text-slate-400 font-mono italic">{{ student.3 }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="space-y-1 mb-6">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email
+                                </p>
+                                <p class="text-xs font-mono text-slate-600 dark:text-slate-300">{{ student.3 }}</p>
+                            </div>
+                            <div class="space-y-1 mb-6">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Roll Number
+                                </p>
+                                <p class="text-xs font-mono text-slate-600 dark:text-slate-300">#{{ student.2 }}</p>
+                            </div>
+                            <div class="space-y-1 mb-6">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Class
+                                    Division
+                                </p>
+                                <p class="text-xs font-bold text-slate-600 dark:text-slate-300">{{ student.4 }}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button
+                                    onclick="openEditSection('{{ student.0 }}', '{{ student.1|escapejs }}', '{{ student.2|escapejs }}', '{{ student.3|escapejs }}', '{{ student.8|escapejs }}', '{{ student.6 }}', '{{ student.7|escapejs }}')"
+                                    class="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 transition-all text-center">
+                                    Edit <i class="fa-solid fa-pen-to-square ml-1"></i>
+                                </button>
+                                <a href="{% url 'admin_student_performance' student.0 %}"
+                                    class="w-14 h-13.5 flex items-center justify-center bg-white dark:bg-slate-800 text-emerald-600 rounded-2xl border border-slate-200 dark:border-white/10 active:scale-95 transition-all">
+                                    <i class="fa-solid fa-user"></i>
+                                </a>
+                                <button
+                                    class="w-14 h-13.5 flex items-center justify-center bg-rose-600 text-white rounded-2xl shadow-lg shadow-rose-500/20 active:scale-95 transition-all"
+                                    onclick="openDeleteModal('{{ student.0 }}', '{{ student.1|escapejs }}')">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <div id="delete-modal"
+        class="fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md transition-all duration-300">
+        <div
+            class="glass-card w-full max-w-md rounded-[2.5rem] p-8 border border-rose-500/20 shadow-2xl bg-white/90 dark:bg-slate-900/90 text-center animate-in zoom-in-95">
+            <div
+                class="w-20 h-20 rounded-full bg-rose-100 dark:bg-rose-900/20 flex items-center justify-center mx-auto mb-6 text-rose-500 text-3xl">
+                <i class="fa-solid fa-user-minus"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-800 dark:text-white uppercase mb-2">Registry Expungement</h3>
+            <p class="text-sm font-bold text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
+                Confirming the erasure of student: <span id="delete-student-name"
+                    class="text-rose-500 font-black"></span>
+                <br>This action will initiate a full database cleanup.
+            </p>
+
+            <form id="delete-form" method="POST" action="">
+                {% csrf_token %}
+                <div class="grid grid-cols-2 gap-4">
+                    <button type="button" onclick="closeDeleteModal()"
+                        class="py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all">Abort</button>
+                    <button type="submit"
+                        class="py-4 bg-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-rose-500/20 hover:bg-rose-700 transition-all">Confirm
+                        Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="message-container"
+        class="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-[200] max-w-md w-full px-4 sm:left-auto sm:right-8 sm:transform-none">
+        <div id="messages-wrapper" class="space-y-4 max-h-96">
+            <!-- Clear All Messages Button - Only show for error messages -->
+            <div id="clear-all-messages" class="hidden mb-4">
+                <button onclick="clearAllMessages()"
+                    class="w-full py-3 px-4 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white text-xs font-bold uppercase tracking-widest rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl">
+                    <i class="fa-solid fa-broom"></i>
+                    Clear All Error Messages
+                </button>
+            </div>
+            {% if messages %}
+            {% for message in messages %}
+            <div class="message-toast group relative overflow-hidden p-5 rounded-[2rem] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-slide-up transition-all duration-300 hover:scale-[1.02]
+            {% if 'success' in message.tags or 'update' in message.tags %} hover:shadow-[0_20px_50px_-12px_rgba(16,185,129,0.25)] {% else %} hover:shadow-[0_20px_50px_-12px_rgba(244,63,94,0.25)] {% endif %}"
+                data-type="{{ message.tags }}">
+
+                <!-- Background Glow -->
+                <div
+                    class="absolute -right-4 -top-4 w-24 h-24 blur-3xl opacity-20 transition-opacity group-hover:opacity-40
+                {% if 'success' in message.tags or 'update' in message.tags %} bg-emerald-500 {% else %} bg-rose-500 {% endif %}">
+                </div>
+
+                <div class="relative flex items-start gap-4">
+                    <div class="flex-shrink-0">
+                        <div
+                            class="toast-icon w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner
+                        {% if 'success' in message.tags or 'update' in message.tags %} bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 {% else %} bg-rose-500/10 text-rose-500 border border-rose-500/20 {% endif %}">
+                            <i
+                                class="fa-solid {% if 'success' in message.tags or 'update' in message.tags %} fa-check-double text-xl {% else %} fa-circle-exclamation text-xl {% endif %}"></i>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 min-w-0 pt-1">
+                        <div class="flex items-center justify-between mb-1">
+                            <h4
+                                class="text-[10px] font-black uppercase tracking-[0.2em]
+                            {% if 'success' in message.tags or 'update' in message.tags %} text-emerald-600 dark:text-emerald-400 {% else %} text-rose-600 dark:text-rose-400 {% endif %}">
+                                {% if 'update' in message.tags %}
+                                Record Synchronization
+                                {% else %}
+                                System Dispatch
+                                {%endif%}
+                            </h4>
+                            <button onclick="dismissToast(this.closest('.message-toast'))"
+                                class="text-slate-400 hover:text-rose-500 transition-colors p-1">
+                                <i class="fa-solid fa-xmark text-sm"></i>
+                            </button>
+                        </div>
+                        <div
+                            class="text-[13px] font-bold text-slate-700 dark:text-slate-200 leading-relaxed pr-6 italic uppercase opacity-90">
+                            {{ message|safe }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Track -->
+                <div class="absolute bottom-0 left-0 w-full h-1 bg-slate-100/50 dark:bg-white/5">
+                    <div class="progress-bar h-full transition-all duration-[2500ms] ease-linear
+                    {% if 'success' in message.tags or 'update' in message.tags %} bg-gradient-to-r from-emerald-400 to-emerald-600 {% else %} bg-gradient-to-r from-rose-400 to-rose-600 {% endif %}"
+                        style="width: 100%;"></div>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+
+        function toggleSection(sectionId) {
+            const targetSection = document.getElementById(sectionId);
+
+            // 1. Identify all potential toggleable sections
+            const allSections = ['import-section', 'student-form', 'edit-student-section']; // Add your IDs here
+
+            allSections.forEach(id => {
+                const section = document.getElementById(id);
+                if (!section) return;
+
+                if (id === sectionId) {
+                    // Logic for the section we want to OPEN
+                    if (section.classList.contains('hidden')) {
+                        section.classList.remove('hidden');
+                        setTimeout(() => {
+                            section.classList.add('opacity-100', 'translate-y-0');
+                            section.classList.remove('opacity-0', '-translate-y-4');
+                        }, 10);
+                    } else {
+                        // If clicking the already open section, close it
+                        closeSection(section);
+                    }
+                } else {
+                    // Logic to CLOSE the other section if it's open
+                    if (!section.classList.contains('hidden')) {
+                        closeSection(section);
+                    }
+                }
+            });
+        }
+
+        // Helper function to handle the closing animation
+        function closeSection(section) {
+            section.classList.add('opacity-0', '-translate-y-4');
+            section.classList.remove('opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                section.classList.add('hidden');
+            }, 500);
+        }
+
+        // Spotlight movement
+        document.addEventListener('mousemove', (e) => {
+            const spotlight = document.getElementById('spotlight');
+            if (spotlight) {
+                spotlight.style.setProperty('--x', `${e.clientX}px`);
+                spotlight.style.setProperty('--y', `${e.clientY}px`);
+            }
+        });
+
+        // Theme Toggle
+        const themeBtn = document.getElementById('theme-switch');
+        if (themeBtn) {
+            themeBtn.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.theme = isDark ? 'dark' : 'light';
+                const themeIcon = document.getElementById('theme-icon');
+                if (themeIcon) themeIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            });
+        }
+
+        // Mobile Sidebar Toggle
+        const hamburgerBtn = document.getElementById('hamburger-button');
+        if (hamburgerBtn) {
+            hamburgerBtn.addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('-translate-x-full');
+            });
+        }
+
+        // Apply styles to Django rendered inputs
+        window.addEventListener('DOMContentLoaded', () => {
+            const inputs = document.querySelectorAll('#student-form input, #student-form select');
+            inputs.forEach(input => {
+                if (!input.classList.contains('django-input')) input.classList.add('django-input');
+            });
+        });
+
+        // --- AUTO ROLL NUMBER GENERATION LOGIC ---
+        const classSelect = document.getElementById('class_id');
+        const rollInput = document.getElementById('roll_no');
+        const rollLoader = document.getElementById('roll-no-loader');
+
+        async function generateRollNumber(classId) {
+            if (!classId || !rollInput) return;
+
+            rollInput.value = '';
+            rollInput.placeholder = "Generating...";
+            if (rollLoader) rollLoader.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`{% url 'generate_roll_number' 0 %}`.replace('0', classId), {
+                    method: 'GET',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    rollInput.value = data.roll_number;
+                } else {
+                    rollInput.placeholder = "Error generating ID";
+                }
+            } catch (err) {
+                rollInput.placeholder = "Sync failed";
+            } finally {
+                if (rollLoader) rollLoader.classList.add('hidden');
+            }
+        }
+
+        if (classSelect) {
+            classSelect.addEventListener('change', function () {
+                generateRollNumber(this.value);
+            });
+        }
+
+        // --- BULK SYNCHRONIZATION LOGIC ---
+        function displayFileName(input) {
+            const display = document.getElementById('file-name-display');
+            const label = document.getElementById('file-label');
+            if (input.files && input.files[0]) {
+                display.innerText = `Selected: ${input.files[0].name}`;
+                display.classList.remove('hidden');
+                label.innerText = "File Locked";
+            }
+        }
+
+
+        function openDeleteModal(id, name) {
+            const modal = document.getElementById('delete-modal');
+            const form = document.getElementById('delete-form');
+            const nameSpan = document.getElementById('delete-student-name');
+
+            form.action = "{% url 'admin_student_delete' 0 %}".replace('0', id);
+            nameSpan.innerText = name;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeDeleteModal() {
+            const modal = document.getElementById('delete-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = 'auto';
+        }
+
+        function openEditSection(id, name, roll, email, parentEmail, classId, password) {
+            // Fill fields
+            document.getElementById('edit_name').value = name;
+            document.getElementById('edit_email').value = email;
+            document.getElementById('edit_parent_email').value = parentEmail;
+            document.getElementById('edit_class_id').value = classId;
+            document.getElementById('edit_roll_no').value = roll;
+            document.getElementById('edit_password').value = password;
+
+            // Trigger validation to update indicators when password is set
+            const editPasswordField = document.getElementById('edit_password');
+            editPasswordField.dispatchEvent(new Event('input'));
+
+            // Update form action
+            const form = document.getElementById('edit-student-form');
+            form.action = "{% url 'admin_student_edit' 0 %}".replace('0', id);
+
+            // Show Modal
+            const modal = document.getElementById('edit-student-modal');
+            const card = document.getElementById('edit-modal-card');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            // Animation Delay
+            setTimeout(() => {
+                card.classList.remove('scale-95', 'opacity-0');
+                card.classList.add('scale-100', 'opacity-100');
+            }, 10);
+
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('edit-student-modal');
+            const card = document.getElementById('edit-modal-card');
+
+            card.classList.add('scale-95', 'opacity-0');
+            card.classList.remove('scale-100', 'opacity-100');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.style.overflow = 'auto';
+            }, 300);
+        }
+
+        window.onclick = function (event) {
+            const deleteModal = document.getElementById('delete-modal');
+            const editModal = document.getElementById('edit-student-modal');
+
+            if (event.target == deleteModal) closeDeleteModal();
+            if (event.target == editModal) closeEditModal();
+        }
+
+        // --- Password Validation Logic ---
+        function setupPasswordValidation(passwordField, submitBtn, validationGrid, validators) {
+            if (!passwordField) return;
+
+            // VISIBILITY: Show validation grid on focus and keep it visible
+            passwordField.addEventListener('focus', () => {
+                validationGrid.classList.remove('hidden');
+                passwordField.type = 'text'; // Show password on focus
+
+                // Validate current value when focused
+                passwordField.dispatchEvent(new Event('input'));
+            });
+
+            // Keep validation visible at all times after first interaction
+            // Only hide password characters on blur, keep validation indicators visible
+            passwordField.addEventListener('blur', () => {
+                passwordField.type = 'password'; // Hide password on blur but keep validation visible
+            });
+
+            // VALIDATION: Check characters in real-time
+            passwordField.addEventListener('input', (e) => {
+                const val = e.target.value;
+
+                const checks = {
+                    len: val.length >= 6,
+                    up: /[A-Z]/.test(val),
+                    low: /[a-z]/.test(val),
+                    num: /[0-9]/.test(val),
+                    spl: /[^A-Za-z0-9]/.test(val)
+                };
+
+                // Update dot colors (Rose to Emerald)
+                Object.keys(checks).forEach(k => {
+                    const el = validators[k];
+                    if (el) {
+                        el.classList.toggle('text-emerald-500', checks[k]);
+                        el.classList.toggle('text-rose-500', !checks[k]);
+                    }
+                });
+
+                // Toggle Button State
+                const allValid = Object.values(checks).every(Boolean);
+                if (submitBtn) {
+                    submitBtn.disabled = !allValid;
+
+                    // 1. Toggle interaction classes
+                    submitBtn.classList.toggle('opacity-50', !allValid);
+                    submitBtn.classList.toggle('cursor-not-allowed', !allValid);
+
+                    // 2. Toggle Color Classes (The Fix)
+                    // When valid: we want brand colors. When invalid: we want slate/gray colors.
+                    if (allValid) {
+                        // Active State: Brand Purple
+                        submitBtn.classList.remove('bg-slate-200', 'dark:bg-slate-800', 'text-slate-400');
+                        submitBtn.classList.add('bg-brand-600', 'text-white', 'shadow-xl', 'shadow-brand-500/20');
+                    } else {
+                        // Disabled State: Gray/Slate
+                        submitBtn.classList.add('bg-slate-200', 'dark:bg-slate-800', 'text-slate-400');
+                        submitBtn.classList.remove('bg-brand-600', 'text-white', 'shadow-xl', 'shadow-brand-500/20');
+                    }
+
+                    // 3. Update Text and Icons
+                    if (submitBtn.id === 'submit-btn') {
+                        submitBtn.innerHTML = allValid
+                            ? 'Establish Registry Record <i class="fa-solid fa-check-double ml-2"></i>'
+                            : 'Secure Credentials Required <i class="fa-solid fa-lock ml-2"></i>';
+                    }
+                }
+            });
+        }
+
+        // Initialize Validation for Manual Form
+        const manualPassword = document.querySelector('#main-student-form input[type="password"]');
+        const manualSubmit = document.getElementById('submit-btn');
+        const manualGrid = document.getElementById('validation-grid');
+        const manualValidators = {
+            len: document.getElementById('v-len'),
+            up: document.getElementById('v-up'),
+            low: document.getElementById('v-low'),
+            num: document.getElementById('v-num'),
+            spl: document.getElementById('v-spl')
+        };
+        setupPasswordValidation(manualPassword, manualSubmit, manualGrid, manualValidators);
+
+        // Trigger initial validation in case there's a pre-filled password
+        if (manualPassword && manualPassword.value) {
+            manualPassword.dispatchEvent(new Event('input'));
+        }
+
+        // Initialize Validation for Edit Form
+        const editPassword = document.getElementById('edit_password');
+        const editSubmit = document.querySelector('#edit-student-form button[type="submit"]');
+        const editGrid = document.getElementById('edit-validation-grid');
+        const editValidators = {
+            len: document.getElementById('ev-len'),
+            up: document.getElementById('ev-up'),
+            low: document.getElementById('ev-low'),
+            num: document.getElementById('ev-num'),
+            spl: document.getElementById('ev-spl')
+        };
+        setupPasswordValidation(editPassword, editSubmit, editGrid, editValidators);
+
+        // Trigger initial validation for edit form in case there's a pre-filled password
+        if (editPassword && editPassword.value) {
+            editPassword.dispatchEvent(new Event('input'));
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const toasts = document.querySelectorAll('.message-toast');
+
+            toasts.forEach(toast => {
+                const progressBar = toast.querySelector('.progress-bar');
+                const messageType = toast.getAttribute('data-type') || "";
+
+                // Get message text to check for 'delete'
+                const messageText = toast.innerText.toLowerCase();
+
+                // Flexible check for extra tags OR deletion keyword
+                const isError = messageType.includes('error') || messageType.includes('danger') || messageType.includes('warning');
+                const isDeletion = messageText.includes('delete') || messageText.includes('erased') || messageText.includes('removed');
+                const isUpdate = messageType.includes('update');
+                const isSuccess = messageType.includes('success');
+
+                if (progressBar) {
+                    if (isError) {
+                        // Hide the entire progress bar container for errors
+                        progressBar.parentElement.style.display = 'none';
+                    } else {
+                        // Animate progress bar for success messages
+                        setTimeout(() => { progressBar.style.width = '0%'; }, 10);
+
+                        // Auto-dismiss success messages after 5 seconds
+                        setTimeout(() => {
+                            dismissToast(toast);
+                        }, 5000);
+                    }
+                }
+            });
+
+            // Initialize clear all button visibility (only for error messages)
+            updateClearAllButton();
+        });
+
+        function dismissToast(toast) {
+            if (!toast) return;
+
+            // Add the fade-out class
+            toast.classList.add('opacity-0', 'translate-x-full', 'scale-95'); // Tailwind animations
+
+            // Remove from DOM after faster animation
+            setTimeout(() => {
+                toast.remove();
+                // Check if we need to show/hide the clear all button (only for error messages)
+                updateClearAllButton();
+            }, 200); // Reduced from 500ms to 200ms for faster dismissal
+        }
+
+        function clearAllMessages() {
+            // Only clear error messages
+            const errorMessages = document.querySelectorAll('.message-toast[data-type*="error"], .message-toast[data-type*="danger"], .message-toast[data-type*="warning"]');
+            const clearAllButton = document.getElementById('clear-all-messages');
+
+            // Add visual feedback to the button
+            const button = clearAllButton.querySelector('button');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Clearing...';
+            button.disabled = true;
+
+            // Clear all error messages quickly
+            errorMessages.forEach((message) => {
+                dismissToast(message);
+            });
+
+            // Reset button quickly
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }, 300);
+        }
+
+        function updateClearAllButton() {
+            // Only count error messages
+            const errorMessages = document.querySelectorAll('.message-toast[data-type*="error"], .message-toast[data-type*="danger"], .message-toast[data-type*="warning"]');
+            const clearAllButton = document.getElementById('clear-all-messages');
+            const messagesWrapper = document.getElementById('messages-wrapper');
+            const button = clearAllButton.querySelector('button');
+
+            if (errorMessages.length >= 1) {
+                clearAllButton.classList.remove('hidden');
+                // Add scrollbar for error messages
+                messagesWrapper.classList.add('overflow-y-auto', 'custom-scrollbar');
+                // Add pulse animation for 3+ error messages to draw attention
+                if (errorMessages.length >= 3) {
+                    button.classList.add('animate-pulse');
+                } else {
+                    button.classList.remove('animate-pulse');
+                }
+            } else {
+                clearAllButton.classList.add('hidden');
+                // Remove scrollbar when no error messages
+                messagesWrapper.classList.remove('overflow-y-auto', 'custom-scrollbar');
+                button.classList.remove('animate-pulse');
+            }
+        }
+
+        // Search and Filter Functionality
+        document.addEventListener('DOMContentLoaded', function () {
+            // Get all table rows
+            const tableRows = document.querySelectorAll('.data-table-row');
+            const printRows = document.querySelectorAll('.print-table-row');
+            const searchInput = document.getElementById('searchInput');
+            const classFilter = document.getElementById('classFilter');
+            const clearFiltersBtn = document.getElementById('clearFilters');
+
+            // Mobile elements
+            const mobileSearchInput = document.getElementById('mobileSearchInput');
+            const mobileClassFilter = document.getElementById('mobileClassFilter');
+            const mobileClearFiltersBtn = document.getElementById('mobileClearFilters');
+
+            // Populate class filter options from the data attributes
+            // First, collect unique classes from the table data
+            const classOptions = new Set();
+            tableRows.forEach(row => {
+                // Extract class from the 4th cell (index 3, zero-based)
+                const classCell = row.querySelector('td:nth-child(4) div');
+                if (classCell) {
+                    classOptions.add(classCell.textContent.trim());
+                }
+            });
+
+            // Add options to desktop filter
+            classOptions.forEach(option => {
+                const opt = document.createElement('option');
+                opt.value = option;
+                opt.textContent = option;
+                classFilter.appendChild(opt);
+            });
+
+            // Add options to mobile filter
+            classOptions.forEach(option => {
+                const opt = document.createElement('option');
+                opt.value = option;
+                opt.textContent = option;
+                mobileClassFilter.appendChild(opt);
+            });
+
+            // Event listeners for desktop
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    filterTable();
+                });
+            }
+
+            if (classFilter) {
+                classFilter.addEventListener('change', function() {
+                    filterTable();
+                });
+            }
+
+            if (clearFiltersBtn) {
+                clearFiltersBtn.addEventListener('click', function () {
+                    if (searchInput) searchInput.value = '';
+                    if (classFilter) classFilter.value = '';
+                    if (mobileSearchInput) mobileSearchInput.value = '';
+                    if (mobileClassFilter) mobileClassFilter.value = '';
+                    filterTable();
+                });
+            }
+
+            // Event listeners for mobile
+            if (mobileSearchInput) {
+                mobileSearchInput.addEventListener('input', function() {
+                    filterTable();
+                });
+            }
+
+            if (mobileClassFilter) {
+                mobileClassFilter.addEventListener('change', function() {
+                    filterTable();
+                });
+            }
+
+            if (mobileClearFiltersBtn) {
+                mobileClearFiltersBtn.addEventListener('click', function () {
+                    if (mobileSearchInput) mobileSearchInput.value = '';
+                    if (mobileClassFilter) mobileClassFilter.value = '';
+                    if (searchInput) searchInput.value = '';
+                    if (classFilter) classFilter.value = '';
+                    filterTable();
+                });
+            }
+
+            // Initialize filter summary on page load
+            updateFilterSummary();
+
+            // Combine both desktop and mobile filtering in one function
+            function filterTable() {
+                const searchTerm = (searchInput ? searchInput.value.toLowerCase() : '') ||
+                    (mobileSearchInput ? mobileSearchInput.value.toLowerCase() : '');
+                const selectedClass = (classFilter ? classFilter.value : '') ||
+                    (mobileClassFilter ? mobileClassFilter.value : '');
+                let visibleCount = 0;
+                let currentPrintSNo = 1;
+                console.log("Search term : ", selectedClass);
+                 updateFilterSummary();
+                // Filter desktop table rows
+                tableRows.forEach((row, index) => {
+                    const studentName = row.querySelector('td:first-child p:first-child').textContent.toLowerCase();
+                    const studentEmail = row.querySelector('td:nth-child(2) p').textContent.toLowerCase();
+                    const rollNumber = row.querySelector('td:nth-child(3) span').textContent.toLowerCase().replace('#', '');
+                    const className = row.querySelector('td:nth-child(4) div').textContent.trim();
+
+                    const matchesSearch = !searchTerm ||
+                        studentName.includes(searchTerm) ||
+                        studentEmail.includes(searchTerm) ||
+                        rollNumber.includes(searchTerm);
+
+                    const matchesClass = !selectedClass || className === selectedClass;
+
+                    if (matchesSearch && matchesClass) {
+                        row.style.display = '';
+                        if (printRows[index]) {
+                            printRows[index].style.display = '';
+                            const snoCell = printRows[index].querySelector('.print-sno');
+                            if (snoCell) snoCell.textContent = currentPrintSNo++;
+                        }
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                        if (printRows[index]) {
+                            printRows[index].style.display = 'none';
+                        }
+                    }
+                });
+
+                // Filter mobile cards
+                const mobileCards = document.querySelectorAll('.md\\:hidden .p-5.rounded-\[2rem\]');
+                mobileCards.forEach(card => {
+                    const studentName = card.querySelector('div.space-y-1:first-child p:first-child').textContent.toLowerCase();
+                    const studentEmail = card.querySelector('div.space-y-1:first-child p:last-child').textContent.toLowerCase();
+                    const rollNumber = card.querySelector('div.space-y-1:nth-child(3) p:last-child').textContent.toLowerCase().replace('#', '');
+                    const className = card.querySelector('div.space-y-1:nth-child(4) p:last-child').textContent.trim();
+
+                    const matchesSearch = !searchTerm ||
+                        studentName.includes(searchTerm) ||
+                        studentEmail.includes(searchTerm) ||
+                        rollNumber.includes(searchTerm);
+
+                    const matchesClass = !selectedClass || className === selectedClass;
+
+                    if (matchesSearch && matchesClass) {
+                        card.style.display = '';
+                        visibleCount++; // Note: this might double count if both desktop and mobile are visible
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+
+                // Count visible elements based on screen size
+                let actualVisibleCount = 0;
+                
+                if (window.innerWidth < 768) {
+                    // On mobile, count visible mobile cards
+                    mobileCards.forEach(card => {
+                        if (window.getComputedStyle(card).display !== 'none') {
+                            actualVisibleCount++;
+                        }
+                    });
+                } else {
+                    // On desktop, count visible table rows
+                    tableRows.forEach(row => {
+                        if (window.getComputedStyle(row).display !== 'none') {
+                            actualVisibleCount++;
+                        }
+                    });
+                }
+
+                document.getElementById('total-counter').textContent = actualVisibleCount;
+
+                // Update Print Summary
+                console.log('Updating filter summary...');
+                updateFilterSummary();
+            }
+
+            // Separate function to update filter summary
+            function updateFilterSummary() {
+                const summary = document.getElementById('summaryContent');
+                if (summary) {
+                    let filterText = [];
+                    
+                    // Get current actual values from the input fields
+                    const currentSearchTerm = (searchInput && searchInput.value.trim()) || 
+                                            (mobileSearchInput && mobileSearchInput.value.trim()) || '';
+                    const currentSelectedClass = (classFilter ? classFilter.value : '') ||
+                                            (mobileClassFilter ? mobileClassFilter.value : '');
+                    
+                    console.log('Search term:', currentSearchTerm);
+                    console.log('Class filter:', currentSelectedClass);
+                    
+                    if (currentSearchTerm) {
+                        filterText.push(`Search: "${currentSearchTerm}"`);
+                    }
+                    
+                    if (currentSelectedClass) {
+                        filterText.push(`Class: ${currentSelectedClass}`);
+                    }
+                    
+                    if (filterText.length > 0) {
+                        summary.innerHTML = filterText.join(', ');
+                        console.log('Filter text:', filterText.join(', '));
+                    } else {
+                        summary.innerHTML = 'No filters applied';
+                        console.log('No filters applied');
+                    }
+                } else {
+                    console.log('Summary element not found');
+                }
+            }
+        });
+
+
+    </script>
+        <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-active, .active, a[class*="bg-brand-500/10"][class*="text-white"], a[class*="bg-accent-fuchsia/10"][class*="text-white"], a[class*="bg-indigo-500/10"][class*="text-white"], a[class*="bg-emerald-500/10"][class*="text-white"]');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+
+</html>

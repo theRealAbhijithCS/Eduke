@@ -1,0 +1,792 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Eduke | Messenger Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+  <script>
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+            accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b', emerald: '#10b981' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+    html,
+    body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      position: fixed;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      letter-spacing: -0.01em;
+      background-color: #f8fafc;
+    }
+
+    .dark body {
+      background-color: #020617;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    #spotlight {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.12) 0%, transparent 40%);
+      z-index: 5;
+    }
+
+    .glass-sidebar {
+      background: rgba(10, 10, 20, 0.95);
+      backdrop-filter: blur(30px);
+      border-right: 1px solid rgba(139, 92, 246, 0.1);
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .dark .glass-card {
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-item-link {
+      position: relative;
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .nav-item-link.active {
+      color: #a78bfa !important;
+      background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+    }
+
+    .nav-item-link.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 25%;
+      height: 50%;
+      width: 4px;
+      background: #d946ef;
+      box-shadow: 0 0 15px #d946ef;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .custom-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #8b5cf633;
+      border-radius: 10px;
+    }
+
+    .user-node:hover {
+      transform: translateY(-2px);
+      background: rgba(124, 58, 237, 0.05);
+      border-color: rgba(124, 58, 237, 0.2);
+    }
+
+    .active-filter {
+      background-color: #8b5cf6 !important;
+      color: white !important;
+    }
+  </style>
+</head>
+
+<body class="text-slate-900 dark:text-white">
+  <div id="spotlight"></div>
+
+  <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+
+    <aside id="sidebar"
+      class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-full">
+      <div
+        class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5">
+
+        <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+          <div class="flex items-center gap-3 group cursor-pointer">
+            <div
+              class="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 group-hover:rotate-12 transition-transform animate-pulse bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 bg-[length:200%_200%]">
+              <img src="{% static 'main/images/logobase_white.png' %}" alt="Logo" class="w-6 h-6 object-contain">
+            </div>
+            <div>
+              <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span
+                  class="text-accent-fuchsia">.</span></h2>
+              <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Faculty Portal</p>
+            </div>
+          </div>
+          <button id="close-sidebar"
+            class="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white transition-all"><i
+              class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+
+        <nav class="flex-grow px-4 space-y-6 overflow-y-auto custom-scroll py-6">
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Management</p>
+            <div class="space-y-1">
+              <a href="{% url 'subject_head_dashboard' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-layer-group"></i><span class="font-bold text-sm">Dashboard</span>
+              </a>
+              <a href="{% url 'subject_head_subjects' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-book"></i><span class="font-bold text-sm">Your Subject</span>
+              </a>
+              <a href="{% url 'subject_head_class' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-chalkboard"></i><span class="font-bold text-sm">Your Class</span>
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Academic Tools</p>
+            <div class="space-y-1">
+              <a href="{% url 'subject_head_attendance' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-hand-point-up"></i><span class="font-bold text-sm">Attendance</span>
+              </a>
+              <a href="{% url 'subject_head_marks' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-user-pen"></i><span class="font-bold text-sm">Student Marks</span>
+              </a>
+              <a href="{% url 'subject_head_evaluation' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-square-poll-vertical"></i><span class="font-bold text-sm">Evaluation</span>
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Communication</p>
+            <div class="space-y-1">
+              <a href="{% url 'subject_head_chat' %}" class="nav-item-link active flex items-center gap-3 px-6 py-3 rounded-xl text-white">
+                <i class="fa-solid fa-comments"></i><span class="font-bold text-sm">Eduke Chat</span>
+              </a>
+              <a href="{% url 'subject_head_profile' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-circle-user"></i><span class="font-bold text-sm">Profile</span>
+              </a>
+            </div>
+          </div>
+        </nav>
+
+        <div class="p-4 mt-auto">
+          <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3">
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 shadow-lg font-black text-white uppercase">
+                {{ subject_head|slice:":1" }}</div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-[11px] font-black text-white truncate uppercase">{{ subject_head }}</h4>
+                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Subject Head</p>
+              </div>
+            </div>
+            <a href="{% url 'logout' %}"
+              class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 hover:text-white transition-all">
+              <span class="text-[9px] font-black uppercase tracking-widest">Logout</span>
+              <i class="fa-solid fa-power-off text-[10px]"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+
+      <header class="h-24 flex items-center justify-between px-8 shrink-0">
+        <div class="flex items-center gap-6">
+          <button id="hamburger-button"
+            class="lg:hidden w-12 h-12 flex items-center justify-center rounded-2xl glass-card text-brand-600 shadow-lg"><i
+              class="fas fa-bars"></i></button>
+          <h2 class="text-2xl lg:text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic">
+            Secure <span class="text-brand-500">Messenger</span></h2>
+        </div>
+        <div class="flex items-center gap-4">
+          {% include 'subject_head/_notification_bell.html' %}
+          <button id="theme-switch"
+            class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center hover:scale-110 transition-transform">
+            <i id="theme-icon" class="fa-solid fa-moon text-brand-600 text-lg"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="px-4 lg:px-8 mb-4">
+        <div class="glass-card p-2 rounded-[2rem] flex items-center gap-4 border border-white/20">
+          <div class="flex-1 relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="nodeSearch" placeholder="Search registry nodes..."
+              class="w-full bg-white/50 dark:bg-black/20 border-none rounded-2xl py-3 pl-14 pr-6 text-sm font-bold focus:ring-2 focus:ring-brand-500 outline-none">
+          </div>
+
+        </div>
+      </div>
+
+      <div class="flex-1 overflow-y-auto px-4 lg:px-8 pb-12 space-y-10 custom-scroll">
+        <section class="mb-12">
+          <div class="flex items-center justify-between mb-6 px-2">
+            <h3
+              class="mono text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 dark:text-slate-500 flex items-center gap-3">
+              <i class="fa-solid fa-clock-rotate-left"></i>
+              Active_Registry_Sessions
+            </h3>
+            <span class="mono text-[9px] text-slate-400 dark:text-slate-600 uppercase tracking-tighter">History_Buffer:
+              Active</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% if chat_users %}
+            {% for user in chat_users %}
+            <a href="{% url 'subject_head_chat_user' user.id %}"
+              class="group/session relative glass-card p-4 rounded-[1.5rem] flex items-center gap-4 border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-all duration-300 shadow-sm overflow-hidden registry-node"
+              data-category="all">
+
+              <div class="absolute left-0 top-1/4 bottom-1/4 w-[3px] rounded-r-full transition-all duration-300 
+                    {% if user.role == 'student' %} bg-indigo-500 
+                    {% elif user.role == 'parent' %} bg-emerald-500 
+                    {% elif user.role == 'class_head' %} bg-brand-500 
+                    {% else %} bg-slate-400 {% endif %}">
+              </div>
+
+              <div class="relative shrink-0">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center font-black text-white text-lg shadow-md transition-transform group-hover/session:scale-105
+                        {% if user.role == 'student' %} bg-indigo-600 
+                        {% elif user.role == 'parent' %} bg-emerald-600 
+                        {% elif user.role == 'class_head' %} bg-slate-900 
+                        {% else %} bg-brand-600 {% endif %}"
+                     style="position: relative;">
+                  {{ user.name|slice:":1"|upper }}
+                </div>
+                <!-- Online status indicator -->
+                <span class="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span
+                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-40"></span>
+                  <span
+                    class="relative inline-flex rounded-full h-3 w-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700"></span>
+                </span>
+                <!-- Unread message badge for this specific user -->
+                <span id="user-badge-{{ user.id }}" class="hidden absolute -bottom-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                  0
+                </span>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <h4
+                  class="font-black text-slate-800 dark:text-slate-200 uppercase truncate text-[13px] tracking-tight group-hover/session:text-slate-900 dark:group-hover/session:text-white transition-colors">
+                  {{ user.name }}
+                </h4>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <p class="text-[9px] font-bold uppercase tracking-widest
+                            {% if user.role == 'student' %} text-indigo-500 
+                            {% elif user.role == 'parent' %} text-emerald-500 
+                            {% elif user.role == 'class_head' %} text-brand-500 
+                            {% else %} text-slate-400 {% endif %}">
+                    {{ user.role }}
+                  </p>
+                  <span class="text-[8px] text-slate-300 dark:text-slate-600 font-black">•</span>
+                  <p class="text-[8px] font-mono text-slate-400 dark:text-slate-500 uppercase">Recent_Sync</p>
+                </div>
+              </div>
+
+              <div
+                class="w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800/50 group-hover/session:bg-slate-200 dark:group-hover/session:bg-slate-800 transition-all">
+                <i
+                  class="fa-solid fa-chevron-right text-[10px] text-slate-400 group-hover/session:translate-x-0.5 transition-transform"></i>
+              </div>
+            </a>
+            {% endfor %}
+            {% else %}
+            <div
+              class="col-span-full py-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[2rem] opacity-40">
+              <i class="fa-solid fa-ghost text-2xl text-slate-400 mb-2"></i>
+              <p class="italic font-bold text-[10px] text-slate-400 uppercase tracking-[0.4em]">
+                No_Active_Session_History
+              </p>
+            </div>
+            {% endif %}
+          </div>
+        </section>
+
+        <!-- Toggle button to show/hide other categories -->
+        <div class="mt-8 text-center">
+          <button id="toggle-other-users" class="glass-card px-8 py-4 rounded-2xl flex items-center gap-4 mx-auto hover:scale-105 transition-transform">
+            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Other_Registry_Nodes</span>
+            <i id="toggle-arrow" class="fa-solid fa-chevron-down text-brand-500 transition-transform"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- Other Categories (Hidden by default when chat_users exist) -->
+      <section id="other-categories" class="space-y-8 hidden">
+          <div>
+            {% if class_heads %}
+            <div class="mb-12 relative group/section">
+              <div class="flex items-center gap-3 mb-6 ml-2">
+                <span class="relative flex h-2 w-2">
+                  <span
+                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
+                </span>
+                <p class="text-[10px] font-black text-brand-500 dark:text-brand-400 uppercase tracking-[0.4em]">
+                  Aether_Authority_Protocol
+                </p>
+              </div>
+
+              {% for user in class_heads %}
+              <a href="{% url 'subject_head_chat_user' user.id %}"
+                class="group/lead relative glass-card p-6 rounded-[2rem] flex items-center gap-6 border-2 border-brand-500/20 hover:border-brand-500 bg-white dark:bg-slate-900/60 shadow-2xl transition-all duration-500 registry-node overflow-hidden"
+                data-category="faculty">
+
+                <div
+                  class="absolute -left-20 -top-20 w-48 h-48 bg-brand-500/5 rounded-full blur-[80px] group-hover/lead:bg-brand-500/10 transition-all">
+                </div>
+
+                <div class="relative shrink-0 z-10">
+                  <div
+                    class="w-20 h-20 rounded-2xl bg-slate-900 dark:bg-brand-600/10 border-2 border-slate-800 dark:border-brand-500/30 text-white flex items-center justify-center text-3xl font-black shadow-[0_0_30px_rgba(0,0,0,0.2)] group-hover/lead:scale-105 transition-all duration-500"
+                    style="position: relative;">
+                    <span class="dark:text-brand-400">{{ user.name|slice:":1"|upper }}</span>
+                  </div>
+                  <div
+                    class="absolute -bottom-2 -right-2 w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center text-white shadow-lg border-2 border-white dark:border-slate-900 group-hover/lead:scale-110 transition-transform z-20">
+                    <i class="fa-solid fa-shield-halved text-xs"></i>
+                  </div>
+                  
+                </div>
+
+                <div class="z-10 flex-1">
+                  <div class="flex items-center gap-2 mb-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
+                    <p class="text-[9px] font-black text-brand-500 uppercase tracking-[0.2em]">Priority_Authority_Node
+                    </p>
+                  </div>
+                  <h4
+                    class="text-2xl font-black text-slate-800 dark:text-white uppercase italic tracking-tighter leading-none mb-1.5">
+                    {{ user.name }}
+                  </h4>
+                  <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                    Level_01 // Class_Head_Access
+                  </p>
+                </div>
+
+                <div class="ml-auto flex items-center gap-6 z-10">
+                  <div class="hidden lg:flex flex-col items-end gap-1 font-mono">
+                    <span
+                      class="text-[9px] font-black uppercase tracking-tighter text-brand-500 opacity-0 group-hover/lead:opacity-100 transition-opacity">
+                      SYSTEM_READY
+                    </span>
+                    <span class="text-[8px] uppercase tracking-tighter text-slate-400 dark:text-slate-500">
+                      Encrypted_Link
+                    </span>
+                  </div>
+
+                  <div class="relative flex items-center justify-center group/launch">
+                    <div
+                      class="absolute inset-0 w-16 h-16 -m-2 rounded-full border border-brand-500/20 bg-brand-500/5 animate-pulse z-0">
+                    </div>
+
+                    <div
+                      class="relative w-12 h-12 rounded-full flex items-center justify-center border-2 border-brand-500 bg-white dark:bg-slate-900 text-brand-500 group-hover/lead:bg-brand-500 group-hover/lead:text-white group-hover/lead:border-brand-600 transition-all duration-300 shadow-xl z-10 overflow-hidden">
+                      <i
+                        class="fa-solid fa-rocket text-sm transition-all duration-500 
+                              group-hover/lead:translate-x-10 group-hover/lead:-translate-y-10 group-hover/lead:opacity-0"></i>
+
+                      <i
+                        class="fa-solid fa-rocket text-sm absolute transition-all duration-500
+                              translate-x-[-40px] translate-y-[40px] opacity-0
+                              group-hover/lead:translate-x-0 group-hover/lead:translate-y-0 group-hover/lead:opacity-100"></i>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  class="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-brand-500/40 to-transparent opacity-0 group-hover/lead:opacity-100 transition-opacity z-0">
+                </div>
+              </a>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if subject_heads %}
+            <div class="mb-12">
+              <div class="flex items-center justify-between mb-6 ml-2">
+                <p
+                  class="text-[10px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-[0.3em] flex items-center gap-2">
+                  <span class="w-1.5 h-1.5 rounded-full bg-brand-600 animate-pulse"></span>
+                  Peer_Faculty_Registry
+                </p>
+                <span class="text-[9px] font-mono text-slate-400 uppercase tracking-tighter">Nodes_Active:
+                  {{subject_heads|length }}</span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {% for user in subject_heads %}
+                <a href="{% url 'subject_head_chat_user' user.id %}"
+                  class="group/faculty relative glass-card p-4 rounded-[1.2rem] flex items-center gap-4 border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/40 hover:border-brand-500/50 transition-all duration-300 shadow-sm overflow-hidden registry-node"
+                  data-category="faculty">
+
+                  <div
+                    class="absolute -right-4 -top-4 w-16 h-16 bg-brand-600/5 rounded-full blur-2xl group-hover/faculty:bg-brand-600/10 transition-colors">
+                  </div>
+
+                  <div class="relative shrink-0">
+                    <div
+                      class="w-11 h-11 rounded-xl flex items-center justify-center font-black text-white text-sm bg-brand-600 shadow-lg shadow-brand-600/20 group-hover/faculty:scale-110 transition-transform duration-300"
+                      style="position: relative;">
+                      {{ user.name|slice:":1"|upper }}
+                    </div>
+                    <div
+                      class="absolute -top-1 -right-1 w-3 h-3 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center">
+                      <div class="w-1.5 h-1.5 rounded-full bg-brand-500"></div>
+                    </div>
+                    
+                  </div>
+
+                  <div class="flex-1 min-w-0 z-10">
+                    <h4
+                      class="text-[11px] font-black text-slate-800 dark:text-slate-100 uppercase truncate tracking-tight group-hover/faculty:text-brand-600 transition-colors">
+                      {{ user.name }}
+                    </h4>
+                    <div class="flex items-center gap-2 mt-0.5">
+                      <span
+                        class="text-[8px] font-bold text-slate-400 uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/5">
+                        SUB_HEAD
+                      </span>
+                    </div>
+                  </div>
+
+                  <div
+                    class="opacity-0 group-hover/faculty:opacity-100 translate-x-4 group-hover/faculty:translate-x-0 transition-all duration-300">
+                    <i class="fa-solid fa-arrow-right text-brand-600 text-[10px]"></i>
+                  </div>
+                </a>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+
+            <section class="space-y-6">
+              <div class="flex items-center justify-between mb-8 px-2">
+                <h3
+                  class="mono text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 dark:text-slate-500 flex items-center gap-3">
+                  <span class="relative flex h-2 w-2">
+                    <span
+                      class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  Registry_Linked_Nodes
+                </h3>
+                <span class="mono text-[9px] text-slate-400 dark:text-slate-500 uppercase tracking-tighter">Sync_Status:
+                  Optimized</span>
+              </div>
+
+              <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                {% for student in students %}
+                {% with s_index=forloop.counter0 %}
+                <div
+                  class="group/node relative glass-card rounded-[1.2rem] overflow-hidden border border-slate-200 dark:border-white/5 flex items-stretch bg-white dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-all duration-300 shadow-sm hover:shadow-md registry-node"
+                  data-category="student">
+
+                  <a href="{% url 'subject_head_chat_user' student.id %}"
+                    class="flex-[1_1_0%] min-w-0 p-4 flex items-center gap-4 hover:bg-indigo-500/5 transition-colors">
+                    <div class="relative shrink-0">
+                      <div
+                        class="w-12 h-12 rounded-xl flex items-center justify-center font-black text-white text-lg bg-indigo-600 shadow-lg dark:shadow-[0_0_20px_rgba(79,70,229,0.3)] group-hover/node:scale-105 transition-transform">
+                        {{ student.name|slice:":1"|upper }}
+                      </div>
+                      <div
+                        class="absolute -bottom-1 -right-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-md px-1 py-0.5 z-20">
+                        <p
+                          class="text-[7px] font-black text-indigo-600 dark:text-indigo-400 tracking-tighter uppercase">
+                          STU</p>
+                      </div>
+                      
+                    </div>
+                    <div class="min-w-0 overflow-hidden">
+                      <p
+                        class="text-[8px] font-bold text-indigo-500 dark:text-indigo-400/80 uppercase tracking-[0.2em] mb-0.5 leading-none">
+                        Primary_Node</p>
+                      <h4
+                        class="text-[13px] font-black text-slate-800 dark:text-slate-200 uppercase truncate tracking-tight group-hover/node:text-indigo-700 dark:group-hover/node:text-white transition-colors">
+                        {{ student.name }}
+                      </h4>
+                    </div>
+                  </a>
+
+                  <div
+                    class="w-14 shrink-0 border-x border-slate-200 dark:border-white/5 flex flex-col items-center justify-center bg-slate-50/30 dark:bg-slate-950/20 relative group/bridge">
+                    <div class="absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2 overflow-hidden">
+                      <div class="absolute inset-0 bg-slate-200 dark:bg-white/5"></div>
+                      <div
+                        class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-transparent via-emerald-500 to-transparent animate-scan-slow">
+                      </div>
+                    </div>
+
+                    <div class="relative z-10 flex items-center justify-center">
+                      <div
+                        class="absolute inset-0 w-9 h-9 border-2 border-dashed border-emerald-500/20 rounded-full animate-spin-slow opacity-0 group-hover/node:opacity-100 transition-opacity duration-700">
+                      </div>
+
+                      <div
+                        class="relative w-8 h-8 rounded-lg rotate-45 border border-emerald-500/40 dark:border-emerald-500/20 flex items-center justify-center bg-white dark:bg-slate-900 shadow-lg group-hover/node:border-emerald-500 transition-all duration-500 group-hover/node:rotate-[225deg]">
+                        <i
+                          class="fa-solid fa-link text-[10px] text-emerald-600 dark:text-emerald-400 -rotate-45 group-hover/node:rotate-[-225deg] transition-all duration-500"></i>
+                      </div>
+
+                      <span class="absolute flex h-3 w-3 -top-1 -right-1">
+                        <span
+                          class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500/50"></span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {% for parent in parents %}
+                  {% if forloop.counter0 == s_index %}
+                  <a href="{% url 'subject_head_chat_user' parent.id %}"
+                    class="flex-[1_1_0%] min-w-0 p-4 flex items-center justify-end gap-4 hover:bg-emerald-500/5 transition-colors registry-node"
+                    data-category="parent">
+                    <div class="min-w-0 overflow-hidden text-right">
+                      <p
+                        class="text-[8px] font-bold text-emerald-600 dark:text-emerald-500/80 uppercase tracking-[0.2em] mb-0.5 leading-none">
+                        Guardian_Node</p>
+                      <h4
+                        class="text-[13px] font-black text-slate-800 dark:text-slate-200 uppercase truncate tracking-tight group-hover/node:text-emerald-700 dark:group-hover/node:text-white transition-colors">
+                        {{ student.name }}
+                      </h4>
+                    </div>
+                    <div class="relative shrink-0">
+                      <div
+                        class="w-12 h-12 rounded-xl flex items-center justify-center font-black text-emerald-600 dark:text-emerald-400 text-lg bg-slate-100 dark:bg-slate-800/50 border border-emerald-200 dark:border-emerald-500/20 group-hover/node:bg-slate-200 dark:group-hover/node:bg-slate-800 group-hover/node:scale-105 transition-all">
+                        P
+                      </div>
+                      <div
+                        class="absolute -bottom-1 -left-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-md px-1 py-0.5 z-20">
+                        <p
+                          class="text-[7px] font-black text-emerald-600 dark:text-emerald-500 tracking-tighter uppercase">
+                          PAR</p>
+                      </div>
+                      
+                    </div>
+                  </a>
+                  {% endif %}
+                  {% endfor %}
+
+                  <div
+                    class="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent opacity-0 group-hover/node:opacity-100 transition-opacity">
+                  </div>
+                </div>
+                {% endwith %}
+                {% endfor %}
+              </div>
+            </section>
+
+        </section>
+      </div>
+  </div>
+
+  <script>
+    // Spotlight Effect
+    window.addEventListener('mousemove', e => {
+      document.getElementById('spotlight').style.setProperty('--x', `${e.clientX}px`);
+      document.getElementById('spotlight').style.setProperty('--y', `${e.clientY}px`);
+    });
+
+    // Sidebar Logic
+    const hamBtn = document.getElementById('hamburger-button');
+    const sidebar = document.getElementById('sidebar');
+    const closeBtn = document.getElementById('close-sidebar');
+    hamBtn.addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+    closeBtn.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+
+    // Theme Switch
+    const themeSwitch = document.getElementById('theme-switch');
+    const themeIcon = document.getElementById('theme-icon');
+    
+    // Initialize theme icon based on current theme
+    if (document.documentElement.classList.contains('dark')) {
+      themeIcon.className = 'fa-solid fa-sun text-yellow-400 text-lg';
+    } else {
+      themeIcon.className = 'fa-solid fa-moon text-brand-600 text-lg';
+    }
+    
+    themeSwitch.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      const isDark = document.documentElement.classList.contains('dark');
+      localStorage.theme = isDark ? 'dark' : 'light';
+      themeIcon.className = isDark ? 'fa-solid fa-sun text-yellow-400 text-lg' : 'fa-solid fa-moon text-brand-600 text-lg';
+    });
+
+    // Toggle other categories section
+    const toggleButton = document.getElementById('toggle-other-users');
+    const otherCategories = document.getElementById('other-categories');
+    const toggleArrow = document.getElementById('toggle-arrow');
+    
+    if (toggleButton && otherCategories) {
+      toggleButton.addEventListener('click', () => {
+        otherCategories.classList.toggle('hidden');
+        toggleArrow.style.transform = otherCategories.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+      });
+    }
+
+    // Filtering and Search Logic
+    document.addEventListener('DOMContentLoaded', function () {
+      const filterButtons = document.querySelectorAll('.filter-btn');
+      const nodes = document.querySelectorAll('.registry-node');
+      const searchInput = document.getElementById('nodeSearch');
+
+      function applyFilters() {
+        const activeFilterBtn = document.querySelector('.filter-btn.active-filter');
+        const activeFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'all';
+        const searchQuery = searchInput.value.toLowerCase().trim();
+
+        nodes.forEach(node => {
+          const category = node.getAttribute('data-category');
+          const text = node.innerText.toLowerCase();
+
+          const matchesFilter = (activeFilter === 'all' || category === activeFilter);
+          const matchesSearch = searchQuery === '' || text.includes(searchQuery);
+
+          if (matchesFilter && matchesSearch) {
+            node.style.display = '';
+          } else {
+            node.style.display = 'none';
+          }
+        });
+      }
+
+      filterButtons.forEach(button => {
+        button.addEventListener('click', function () {
+          filterButtons.forEach(btn => btn.classList.remove('active-filter'));
+          this.classList.add('active-filter');
+          applyFilters();
+        });
+      });
+
+      searchInput.addEventListener('input', applyFilters);
+    });
+
+    // Get CSRF token
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
+    // Real-time notification count updates via AJAX
+    function updateNotificationCounts() {
+      console.log('🔔 Updating notification counts...');
+      fetch("{% url 'subject_head_get_unread_count' %}", {
+        method: 'GET',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': getCookie('csrftoken'),
+        },
+        credentials: 'same-origin'
+      })
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+      })
+      .then(data => {
+        console.log('📊 Unread count data:', data);
+            
+        // Create a map of sender_id to count
+        const senderCounts = {};
+        if (data.senders && data.senders.length > 0) {
+          data.senders.forEach(sender => {
+            senderCounts[sender.sender_id] = sender.count;
+            console.log('  📬 Sender:', sender.sender_name, 'Count:', sender.count);
+          });
+        }
+            
+        // Update ALL user badges - both in active sessions and category sections
+        document.querySelectorAll('[id^="user-badge-"]').forEach(badgeElement => {
+          // Extract user ID from element ID
+          const userId = parseInt(badgeElement.id.replace('user-badge-', ''));
+          const unreadCount = senderCounts[userId] || 0;
+              
+          console.log('  🔍 Badge for user', userId, '- Unread:', unreadCount);
+              
+          if (unreadCount > 0) {
+            // Show badge with count
+            badgeElement.textContent = unreadCount > 9 ? '9+' : unreadCount;
+            badgeElement.classList.remove('hidden');
+            console.log('    ✅ Badge shown with count:', unreadCount);
+          } else {
+            // Hide badge if no unread messages
+            badgeElement.classList.add('hidden');
+            console.log('    👁️ Badge hidden (no unread)');
+          }
+        });
+            
+        console.log('✅ Notification update complete!');
+      })
+      .catch(error => console.error('❌ Error fetching notification counts:', error));
+    }
+
+    // Initial update after a short delay
+    setTimeout(updateNotificationCounts, 500);
+    
+    // Poll for updates every 3 seconds
+    const notificationPollInterval = setInterval(updateNotificationCounts, 3000);
+    
+    // Stop polling when leaving page
+    window.addEventListener('beforeunload', () => {
+      clearInterval(notificationPollInterval);
+    });
+  </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-link.active');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+
+</html>

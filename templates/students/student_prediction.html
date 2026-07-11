@@ -1,0 +1,444 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eduke | Prediction Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+  <script>
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+            accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+    
+    html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.01em; background-color: #f8fafc; }
+    .dark body { background-color: #020617; }
+
+    #spotlight {
+      position: fixed; inset: 0; pointer-events: none;
+      background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.12) 0%, transparent 40%);
+      z-index: 5;
+    }
+    .orb { position: absolute; border-radius: 50%; filter: blur(80px); z-index: 0; opacity: 0.3; animation: float 20s infinite alternate; }
+    @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(80px, 40px); } }
+
+    .glass-sidebar {
+      background: rgba(10, 10, 20, 0.95);
+      backdrop-filter: blur(30px);
+      border-right: 1px solid rgba(139, 92, 246, 0.1);
+    }
+    
+    .glass-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    /* --- ADDED: Dark Mode Style for Glass Cards --- */
+    .dark .glass-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    /* ---------------------------------------------- */
+
+    .nav-item-link { position: relative; transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); }
+    .nav-item-link.active {
+      color: #a78bfa !important;
+      background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+    }
+    .nav-item-link.active::before {
+      content: ''; position: absolute; left: 0; top: 25%; height: 50%; width: 4px;
+      background: #d946ef; box-shadow: 0 0 15px #d946ef; border-radius: 0 4px 4px 0;
+    }
+
+    .custom-scroll::-webkit-scrollbar { width: 5px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #8b5cf633; border-radius: 10px; }
+    
+    .prediction-glow {
+      box-shadow: 0 0 20px rgba(124, 58, 237, 0.2);
+      border: 1px solid rgba(124, 58, 237, 0.3);
+    }
+  </style>
+</head>
+
+<body class="text-slate-900">
+  <div class="orb w-96 h-96 bg-brand-500 top-[-10%] left-[-10%]"></div>
+  <div class="orb w-80 h-80 bg-accent-indigo bottom-[10%] right-[5%]"></div>
+
+  <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+    
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-full">
+      <div class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5 bg-[#0a0a14]/80 backdrop-blur-xl">
+
+        <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+          <div class="flex items-center gap-3 group">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 animate-pulse">
+              <img src="{% static 'main/images/logobase_white.png' %}" class="w-6 h-6 object-contain">
+            </div>
+            <div>
+              <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span class="text-accent-fuchsia">.</span></h2>
+              <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Student Portal</p>
+            </div>
+          </div>
+          <button id="close-sidebar" class="lg:hidden text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+
+        <nav class="flex-grow px-4 space-y-4 overflow-y-auto custom-scroll py-2">
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Academic</p>
+            <div class="space-y-1">
+              <a href="{% url 'student_dashboard' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-layer-group"></i><span class="font-bold text-sm">Dashboard</span>
+              </a>
+              <a href="{% url 'student_class' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-chalkboard"></i><span class="font-bold text-sm">Your Class</span>
+              </a>
+              <a href="{% url 'student_performance'%}" class="nav-item-link  relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-chart-line"></i><span class="font-bold text-sm">Performance</span>
+              </a>
+              <a href="{% url 'student_view_attendance'%}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-calendar-check"></i><span class="font-bold text-sm">View Attendance</span>
+              </a>
+              <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">AI Tools</p>
+            <div class="space-y-1">
+              <a href="{% url 'student_prediction' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_prediction' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-fire-flame-curved text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Prediction</span>
+              </a>
+
+              <a href="{% url 'student_eduke_bot' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_eduke_bot' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-robot text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Eduke Bot</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Social</p>
+            <div class="space-y-1">
+              <a href="{% url 'student_chat' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_chat' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-comments text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Eduke Chat</span>
+              </a>
+
+              <a href="{% url 'student_profile' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_profile' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-circle-user text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Profile</span>
+              </a>
+            </div>
+          </div>
+            </div>
+          </div>
+        </nav>
+
+        <div class="p-4 mt-auto">
+          <div class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 font-black text-white text-xs">
+                {{ student_data.student_name|slice:":1"|upper }}
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-[11px] font-black text-white truncate uppercase">{{ student_data.student_name }}</h4>
+                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Student</p>
+              </div>
+            </div>
+            <a href="{% url 'logout' %}" class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 transition-all">
+              <span class="text-[9px] font-black uppercase tracking-widest group-hover/btn:text-white">Logout</span>
+              <i class="fa-solid fa-power-off text-[10px] group-hover/btn:text-white"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+      
+      <header class="h-24 flex items-center justify-between px-8 shrink-0">
+        <div class="flex items-center gap-6">
+          <button id="hamburger-button" class="lg:hidden w-12 h-12 flex items-center justify-center rounded-2xl glass-card text-brand-600 shadow-lg"><i class="fas fa-bars"></i></button>
+          <div>
+            <h2 class="text-2xl lg:text-3xl font-black text-slate-800 dark:text-white tracking-tighter">Performance <span class="text-brand-500 italic">Forecasting</span></h2>
+            <p class="text-xs font-bold text-purple-600 dark:text-brand-400 tracking-widest uppercase">Predictive Module Active</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          {% include 'students/_notification_bell.html' %}
+          <button id="theme-switch" 
+                  class="w-12 h-12 rounded-2xl bg-white/60 dark:bg-white/5 border border-white dark:border-white/10 shadow-2xl flex items-center justify-center text-brand-600 dark:text-amber-400 hover:scale-110 hover:shadow-brand-500/20 transition-all duration-500 group">
+                  <i id="theme-icon" class="fa-solid fa-moon text-lg group-hover:rotate-[360deg] transition-transform duration-1000"></i>
+              </button>
+        </div>
+      </header>
+
+      <div id="content-scroll-container" class="flex-1 overflow-y-auto px-4 lg:px-8 pb-12 space-y-8 custom-scroll">
+        
+        <div class="glass-card rounded-[3rem] p-8 lg:p-10 shadow-2xl relative overflow-hidden border border-white/20 bg-white/10 backdrop-blur-xl">
+    <div class="relative z-10 grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
+        
+        <!-- Panel 1: Input & Context -->
+        <div class="xl:col-span-4 space-y-6 flex flex-col justify-between bg-white/5 dark:bg-white/5 rounded-[2.5rem] p-6 border border-white/10">
+            <div>
+                <h3 class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Neural Input Nodes</h3>
+                
+                <form method="GET" action="{% url 'student_prediction' %}" id="subject-form" class="mb-5">
+                    <div class="relative">
+                        <select name="subject_id" id="subject-select" class="w-full bg-slate-900 text-white pl-4 pr-10 py-3.5 rounded-xl font-bold text-[10px] outline-none border border-white/10 appearance-none" onchange="this.form.submit()">
+                            <option value="" hidden>Select Target Subject...</option>
+                            {% for subject in subjects %}
+                                <option value="{{ subject.id }}" {% if subject.id|stringformat:"s" == selected_subject_id|stringformat:"s" %}selected{% endif %}>
+                                    {{ subject.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-purple-400 pointer-events-none text-[10px]"></i>
+                    </div>
+                </form>
+
+                <div class="grid grid-cols-1 gap-3 mb-5">
+                    <div class="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 flex justify-between items-center">
+                        <span class="text-[9px] font-black uppercase text-blue-500">Attendance</span>
+                        <h4 class="text-lg font-black text-slate-800 dark:text-white">{{ student_data.attendance_percentage|floatformat:1 }}%</h4>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex justify-between items-center">
+                        <span class="text-[9px] font-black uppercase text-emerald-500">Internals</span>
+                        <h4 class="text-lg font-black text-slate-800 dark:text-white">{{ student_data.internal_marks|floatformat:1 }}%</h4>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-fuchsia-500/5 border border-fuchsia-500/10 flex justify-between items-center">
+                        <span class="text-[9px] font-black uppercase text-fuchsia-500">Participation</span>
+                        <h4 class="text-lg font-black text-slate-800 dark:text-white">{{ student_data.class_participation_rating|floatformat:1 }}%</h4>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 p-3 bg-slate-400/5 rounded-xl border border-slate-400/10">
+                    <i class="fa-solid fa-circle-info text-slate-400 text-[10px]"></i>
+                    <p class="text-[8px] font-bold text-slate-500 uppercase tracking-wider">All 7 primary parameters are taken under consideration for forecasting.</p>
+                </div>
+            </div>
+
+            <button id="predict-btn" class="group w-full py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3 text-[10px]">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                Generate Forecast
+            </button>
+        </div>
+
+        <!-- Panel 2: Prediction Score -->
+        <div id="prediction-result-container" class="xl:col-span-4 flex flex-col items-center justify-center bg-slate-900/5 dark:bg-white/5 rounded-[2.5rem] p-6 border border-white/10 relative overflow-hidden">
+            <div id="loading-overlay" class="hidden absolute inset-0 bg-slate-900/95 backdrop-blur-md z-20 flex flex-col items-center justify-center text-white">
+                <div class="w-10 h-10 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-3"></div>
+                <span class="text-[9px] font-black tracking-widest uppercase">Analyzing...</span>
+            </div>
+
+            <p class="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6">Forecasted Performance</p>
+            
+            <div class="relative mb-6">
+                <svg class="w-40 h-40 transform -rotate-90">
+                    <circle cx="80" cy="80" r="70" stroke="currentColor" stroke-width="8" fill="transparent" class="text-slate-200 dark:text-slate-800" />
+                    <circle id="prediction-circle" cx="80" cy="80" r="70" stroke="currentColor" stroke-width="8" fill="transparent" 
+                            stroke-dasharray="440" stroke-dashoffset="440"
+                            class="text-purple-600 transition-all duration-1000 ease-out" />
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <h3 class="text-5xl font-black tracking-tighter text-slate-800 dark:text-white" id="predicted-marks">--</h3>
+                    <span class="text-[9px] font-bold text-slate-400 uppercase text-center px-4" id="score-label">Select subject to predict score</span>
+                </div>
+            </div>
+            
+            <div id="confidence-badge" class="hidden text-[8px] font-black text-brand-400 uppercase tracking-[0.3em] bg-brand-500/10 px-4 py-2 rounded-full border border-brand-500/20">
+                Confidence Level: High (94.2%)
+            </div>
+        </div>
+
+        <!-- Panel 3: Strategic Insights -->
+        <div id="prediction-insights-container" class="xl:col-span-4 flex flex-col justify-center bg-slate-900/5 dark:bg-white/5 rounded-[2.5rem] p-6 border border-white/10 relative overflow-hidden">
+            <h3 class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Strategic AI Insights</h3>
+            
+            <div id="performance-tips" class="w-full space-y-3 mb-6">
+                <div class="flex items-start gap-2 p-2 rounded-xl bg-white/5 border border-white/5 text-[9px] font-bold text-slate-400">
+                    <i class="fa-solid fa-lightbulb text-amber-400 mt-0.5"></i><span>Small steps every day lead to significant long-term growth.</span>
+                </div>
+                <div class="flex items-start gap-2 p-2 rounded-xl bg-white/5 border border-white/5 text-[9px] font-bold text-slate-400">
+                    <i class="fa-solid fa-lightbulb text-amber-400 mt-0.5"></i><span>Focus on conceptual clarity over simple rote memorization.</span>
+                </div>
+            </div>
+
+            <div id="performance-message" class="w-full text-center text-[9px] font-bold text-slate-500 dark:text-slate-400 bg-white/50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-white/5 leading-relaxed italic">
+                Quality education is the most powerful tool you can use to change your future.
+            </div>
+        </div>
+    </div>
+    </div>
+</div>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Cursor Spotlight
+    window.addEventListener('mousemove', e => {
+      document.getElementById('spotlight').style.setProperty('--x', `${e.clientX}px`);
+      document.getElementById('spotlight').style.setProperty('--y', `${e.clientY}px`);
+    });
+
+    // Mobile Nav
+    const hamBtn = document.getElementById('hamburger-button');
+    const sidebar = document.getElementById('sidebar');
+    const closeBtn = document.getElementById('close-sidebar');
+    hamBtn.addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+    closeBtn.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+
+   function renderDashboard() {
+    // 1. Prediction AJAX
+    const predictBtn = document.getElementById('predict-btn');
+    if (predictBtn) {
+        predictBtn.addEventListener('click', function() {
+            const subjectId = document.getElementById('subject-select').value;
+            if (!subjectId) {
+                alert('Please select a subject first.');
+                return;
+            }
+
+            const overlay = document.getElementById('loading-overlay');
+            const scoreLabel = document.getElementById('score-label');
+            const confidenceBadge = document.getElementById('confidence-badge');
+            const circle = document.getElementById('prediction-circle');
+            const marksDisplay = document.getElementById('predicted-marks');
+            const tipsContainer = document.getElementById('performance-tips');
+            const messageBox = document.getElementById('performance-message');
+            
+            overlay.classList.remove('hidden');
+
+            fetch(`?subject_id=${subjectId}`, {
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+            .then(res => res.json())
+            .then(data => {
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    scoreLabel.innerText = "Score Expected";
+                    confidenceBadge.classList.remove('hidden');
+                    const score = parseFloat(data.predicted_marks) || 0;
+                    
+                    // Update Circle (r=70 -> circumference ~440)
+                    const offset = 440 - (440 * score / 100);
+                    circle.style.strokeDashoffset = offset;
+                    
+                    // Animate Marks Number
+                    let current = 0;
+                    const step = score / 20;
+                    const timer = setInterval(() => {
+                        current += step;
+                        if (current >= score) {
+                            marksDisplay.innerText = score.toFixed(1);
+                            clearInterval(timer);
+                        } else {
+                            marksDisplay.innerText = current.toFixed(1);
+                        }
+                    }, 30);
+
+                    // Motivational Points
+                    tipsContainer.innerHTML = '';
+                    let tips = [];
+                    let statusColor = '';
+
+                    if (score >= 85) {
+                        tips = [
+                            "Outstanding trajectory detected.",
+                            "Maintain study efficiency of {{ student_data.study_time_rating }}%."
+                        ];
+                        statusColor = 'text-emerald-500';
+                        messageBox.innerText = "Elite status. Consistency is key.";
+                    } else if (score >= 70) {
+                        tips = [
+                            "Strong baseline. Room to optimize.",
+                            "Review assignments for clarity."
+                        ];
+                        statusColor = 'text-indigo-500';
+                        messageBox.innerText = "Solid progress. Push for top-tier.";
+                    } else if (score >= 50) {
+                        tips = [
+                            "Average performance detected.",
+                            "Improve sleep hygiene/focus."
+                        ];
+                        statusColor = 'text-amber-500';
+                        messageBox.innerText = "Baseline achieved. Capable of more.";
+                    } else {
+                        tips = [
+                            "Alert: Low engagement detected.",
+                            "Immediate boost in attendance needed."
+                        ];
+                        statusColor = 'text-rose-500';
+                        messageBox.innerText = "Intervention suggested. Start today.";
+                    }
+
+                    tips.forEach(tip => {
+                        const tipEl = document.createElement('div');
+                        tipEl.className = 'flex items-start gap-2 p-2 rounded-xl bg-white/5 border border-white/5 text-[9px] font-bold text-slate-400';
+                        tipEl.innerHTML = `<i class="fa-solid fa-circle-check ${statusColor} mt-0.5"></i><span>${tip}</span>`;
+                        tipsContainer.appendChild(tipEl);
+                    });
+
+                }, 1200);
+            });
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', renderDashboard);
+
+    const themeSwitch = document.getElementById('theme-switch');
+        const themeIcon = document.getElementById('theme-icon');
+        
+        function updateThemeIcon() {
+            if (document.documentElement.classList.contains('dark')) {
+                themeIcon.className = 'fa-solid fa-sun';
+            } else {
+                themeIcon.className = 'fa-solid fa-moon';
+            }
+        }
+        updateThemeIcon();
+
+        themeSwitch.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+            updateThemeIcon();
+        });
+  </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-link.active');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+</html>

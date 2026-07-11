@@ -1,0 +1,697 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduke | {{ class_obj.class_name }} Details</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // Theme initialization (Same as before)
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa',
+                            500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95',
+                        },
+                        accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b', emerald: '#10b981' }
+                    }
+                }
+            }
+        }
+
+
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            transition: background-color 0.3s ease;
+        }
+
+        .dark body {
+            background-color: #020617;
+        }
+
+        #spotlight {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.08) 0%, transparent 40%);
+            z-index: 1;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #8b5cf633;
+            border-radius: 10px;
+        }
+
+        @keyframes slide-up {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .animate-slide-up {
+            animation: slide-up 0.4s ease-out forwards;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .animate-shimmer {
+            animation: shimmer 2.5s infinite linear;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            /* IE and Edge */
+            scrollbar-width: none;
+            /* Firefox */
+        }
+    </style>
+</head>
+
+<body class="antialiased overflow-x-hidden">
+    <div id="spotlight"></div>
+
+    <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+        <aside id="sidebar"
+            class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-[100dvh] lg:h-full">
+
+            <div
+                class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5 bg-[#0a0a14]/80 backdrop-blur-xl">
+
+                <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+                    <div class="flex items-center gap-3 group cursor-pointer">
+                        <div
+                            class="w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 dark:border-white/10 bg-white/10 dark:bg-white/5 group-hover:rotate-12 transition-transform animate-pulse bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 bg-[length:200%_200%]">
+                            <img src="{% static 'main/images/logobase_white.png' %}" alt="Eduke Logo"
+                                class="w-6 h-6 object-contain animate-color-cycle">
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black tracking-tighter text-white uppercase text-nowrap">
+                                Eduke<span class="text-accent-fuchsia">.</span>
+                            </h2>
+                            <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Portal</p>
+                        </div>
+                    </div>
+
+                    <button id="close-sidebar"
+                        class="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white transition-all">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <nav class="flex-grow px-4 space-y-4 overflow-y-auto no-scrollbar py-2">
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Command</p>
+                        <div class="space-y-1">
+
+                            <a href="{% url 'admin_dashboard' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'admin_dashboard' %} 
+                    active bg-brand-500/10 border border-brand-500/20 text-white 
+                {% else %} 
+                    text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+                {% endif %}">
+
+
+                                <i
+                                    class="fa-solid fa-layer-group text-base {% if request.resolver_match.url_name == 'admin_dashboard' %} text-brand-400 {% else %} group-hover:text-brand-400 {% endif %}"></i>
+                                <span class="font-bold text-sm">Dashboard</span>
+                            </a>
+
+                            <a href="{% url 'admin_students' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                        {% if request.resolver_match.url_name == 'admin_students' %} 
+                            bg-accent-fuchsia/10 border border-accent-fuchsia/20 text-white 
+                        {% else %} 
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+                        {% endif %}">
+
+                                {% if request.resolver_match.url_name == 'admin_students' %}
+                                <span
+                                    class="absolute left-2 w-1 h-4 bg-accent-fuchsia rounded-full shadow-[0_0_10px_#d946ef]"></span>
+                                {% endif %}
+
+                                <i
+                                    class="fa-solid fa-user-shield text-base {% if request.resolver_match.url_name == 'admin_students' %} text-accent-fuchsia {% else %} group-hover:text-accent-fuchsia {% endif %}"></i>
+                                <span class="font-bold text-sm">Students</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Operations
+                        </p>
+                        <div class="space-y-1">
+
+                            <a href="{% url 'admin_classes' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                        {% if request.resolver_match.url_name == 'admin_classes' or request.resolver_match.url_name == 'admin_class_detail' %} 
+                            bg-indigo-500/10 border border-indigo-500/20 text-white 
+                        {% else %} 
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+                        {% endif %}">
+
+                                {% if request.resolver_match.url_name == 'admin_classes' or request.resolver_match.url_name == 'admin_class_detail' %}
+                                <span
+                                    class="absolute left-2 w-1 h-4 bg-indigo-500 rounded-full shadow-[0_0_10px_#6366f1]"></span>
+                                {% endif %}
+
+                                <i
+                                    class="fa-solid fa-chalkboard-user text-base {% if request.resolver_match.url_name == 'admin_classes' or request.resolver_match.url_name == 'admin_class_detail'%} text-indigo-400 {% else %} group-hover:text-indigo-400 {% endif %}"></i>
+                                <span class="font-bold text-sm">Manage Classes</span>
+                            </a>
+
+                            <a href="{% url 'admin_subjects' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                        {% if request.resolver_match.url_name == 'admin_subjects' %} 
+                            bg-emerald-500/10 border border-emerald-500/20 text-white 
+                        {% else %} 
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+                        {% endif %}">
+
+                                {% if request.resolver_match.url_name == 'admin_subjects' %}
+                                <span
+                                    class="absolute left-2 w-1 h-4 bg-emerald-500 rounded-full shadow-[0_0_10px_#10b981]"></span>
+                                {% endif %}
+
+                                <i
+                                    class="fa-solid fa-book-open-reader text-base {% if request.resolver_match.url_name == 'admin_subjects' %} text-emerald-400 {% else %} group-hover:text-emerald-400 {% endif %}"></i>
+                                <span class="font-bold text-sm">Subject Head</span>
+                            </a>
+
+                            <a href="{% url 'admin_reports' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+    {% if request.resolver_match.url_name == 'admin_reports' %} 
+        bg-indigo-500/10 border border-indigo-500/20 text-white 
+    {% else %} 
+        text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+    {% endif %}">
+
+                                {% if request.resolver_match.url_name == 'admin_reports' %}
+                                <span
+                                    class="absolute left-2 w-1 h-4 bg-indigo-500 rounded-full shadow-[0_0_10px_#6366f1]"></span>
+                                {% endif %}
+
+                                <i
+                                    class="fa-solid fa-chart-pie text-base 
+        {% if request.resolver_match.url_name == 'admin_reports' %} text-indigo-400 {% else %} group-hover:text-indigo-400 {% endif %}"></i>
+
+                                <span class="font-bold text-sm">Reports Hub</span>
+                            </a>
+
+
+                        </div>
+                    </div>
+
+
+
+                    <div class="pt-2">
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">User</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'admin_profile' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                        {% if request.resolver_match.url_name == 'admin_profile' %} 
+                            bg-brand-500/10 border border-brand-500/20 text-white 
+                        {% else %} 
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+                        {% endif %}">
+
+                                {% if request.resolver_match.url_name == 'admin_profile' %}
+                                <span
+                                    class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>
+                                {% endif %}
+
+                                <i
+                                    class="fa-solid fa-circle-user text-base {% if request.resolver_match.url_name == 'admin_profile' %} text-brand-400 {% else %} group-hover:text-brand-400 {% endif %}"></i>
+                                <span class="font-bold text-sm">{{ institution.institution_abbreviation|default:"User"}}
+                                    Profile</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+
+                <div class="p-4 shrink-0 mt-auto lg:mb-0">
+                    <div
+                        class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3 transition-all hover:border-white/20">
+                        <div class="flex items-center gap-3">
+                            <div class="relative flex-shrink-0">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 shadow-lg">
+                                    <span class="text-[11px] font-black text-white uppercase">
+                                        {{ institution.institution_abbreviation|default:"EDU" }}
+                                    </span>
+                                </div>
+                                <div
+                                    class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-[#0a0a14] rounded-full">
+                                </div>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="text-[11px] font-black text-white truncate tracking-tight mb-0.5">
+                                    {{ "Eduke Institution" }}
+                                </h4>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none">
+                                    Admin</p>
+                            </div>
+
+                        </div>
+
+                        <div class="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+
+                        <a href="{% url 'logout' %}"
+                            class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 hover:border-rose-500 transition-all duration-300">
+                            <span
+                                class="text-[9px] font-black uppercase tracking-widest text-rose-400 group-hover/btn:text-white">Logout</span>
+                            <i
+                                class="fa-solid fa-power-off text-[10px] text-rose-500 group-hover/btn:text-white transition-colors"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        <main class="flex-1 flex flex-col min-w-0 overflow-y-auto custom-scroll">
+            <header class="h-20 flex items-center justify-between px-8 shrink-0">
+                <div class="flex items-center gap-4">
+                    <button onclick="document.getElementById('sidebar').classList.toggle('-translate-x-full')"
+                        class="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl glass-card"><i
+                            class="fa-solid fa-bars-staggered text-brand-600"></i></button>
+                    <div class="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-widest">
+                        <a href="{% url 'admin_classes' %}" class="hover:text-brand-500 transition-colors">Classes</a>
+                        <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                        <span class="text-brand-500">{{ class_obj.class_name }}</span>
+                    </div>
+                </div>
+                <button id="theme-switch"
+                    class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center hover:scale-105 transition-all">
+                    <i id="theme-icon" class="fa-solid fa-moon text-brand-600 dark:text-amber-400 text-lg"></i>
+                </button>
+            </header>
+
+            <div class="p-4 lg:p-8 space-y-8 animate-slide-up">
+                <div class="glass-card rounded-[2.5rem] p-8 lg:p-10 border-2 border-brand-500/10">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-8">
+                        <div class="flex items-center gap-6">
+                            <div
+                                class="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-brand-500 to-indigo-600 flex items-center justify-center text-white text-3xl font-black shadow-2xl shadow-brand-500/20">
+                                {{ class_obj.class_name|slice:":1" }}
+                            </div>
+                            <div>
+                                <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                                    {{ class_obj.class_name }}</h1>
+                                <div class="flex flex-wrap gap-3 mt-2">
+                                    <span
+                                        class="px-4 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">Active
+                                        Entity</span>
+                                    <span class="flex items-center gap-2 text-slate-400 text-xs font-bold"><i
+                                            class="fa-solid fa-user-tie text-brand-500"></i> {{ class_obj.class_head }}
+                                    </span>
+                                    <span class="flex items-center gap-2 text-slate-400 text-xs font-bold"><i
+                                            class="fa-solid fa-envelope text-brand-500"></i> {{ class_obj.email }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-3">
+                            <button onclick="window.location.href='{% url 'admin_classes' %}'"
+                                class="px-6 py-3 rounded-2xl bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all">
+                                <i class="fa-solid fa-arrow-left mr-2"></i> Back
+                            </button>
+
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-10">
+                        <div
+                            class="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">System ID</p>
+                            <p class="text-sm font-bold text-slate-700 dark:text-slate-200">#{{ class_obj.id }}</p>
+                        </div>
+                        <div
+                            class="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total
+                                Enrollment</p>
+                            <p class="text-sm font-bold text-slate-700 dark:text-slate-200">{{ students|length }}
+                                Students</p>
+                        </div>
+                        <!-- <div class="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Created Date</p>
+                            <p class="text-sm font-bold text-slate-700 dark:text-slate-200">{{ class_obj.created_at|date:"M d, Y" }}</p>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Last Update</p>
+                            <p class="text-sm font-bold text-slate-700 dark:text-slate-200">{{ class_obj.updated_at|date:"M d, Y" }}</p>
+                        </div> -->
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                    <div
+                        class="lg:col-span-1 glass-card rounded-[2.5rem] p-8 flex flex-col items-center justify-center border-2 border-brand-500/10">
+                        <div class="text-center mb-6">
+                            <h3 class="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">Grade
+                                Distribution</h3>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Overall
+                                Performance</p>
+                        </div>
+
+                        <div class="relative w-full max-w-[220px]">
+                            <canvas id="evaluationChart"></canvas>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <span class="text-2xl font-black text-brand-600 dark:text-brand-400">
+                                    {{ avg_score|default:"0" }}%</span>
+                                <span class="text-[8px] font-black text-slate-400 uppercase">Avg Score</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 mt-8 w-full">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-accent-indigo"></span>
+                                <span class="text-[10px] font-bold text-slate-500 uppercase">Distinction({{distinction_count }})</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-accent-indigo"></span>
+                                <span class="text-[10px] font-bold text-slate-500 uppercase">Passed ({{ passed_count}})</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-2 glass-card rounded-[2.5rem] p-8 border-2 border-brand-500/10">
+                        <div class="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 class="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">
+                                    Class Insight Report</h3>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Generated for
+                                    {{ class_obj.class_name }}</p>
+                            </div>
+                            <!-- <a href="{% url 'export_class_report' class_obj.id %}"
+                                class="p-3 rounded-xl bg-brand-500/10 text-brand-500 hover:bg-brand-500 hover:text-white transition-all">
+                                <i class="fa-solid fa-file-export"></i>
+                            </a> -->
+                        </div>
+
+                        <div class="space-y-6">
+                            <div class="space-y-6">
+                                <div class="space-y-2">
+                                    <div class="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                                        <span class="text-slate-500">Class Participation</span>
+                                        <span class="text-brand-500">{{ participation_rating }}% Rating</span>
+                                    </div>
+                                    <div
+                                        class="h-3 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden p-0.5">
+                                        <div class="h-full bg-gradient-to-r from-brand-500 to-accent-indigo rounded-full shadow-[0_0_10px_#8b5cf6] transition-all duration-700"
+                                            style="width: {{ participation_rating }}%"></div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <div class="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                                        <span class="text-slate-500">Academic Activity</span>
+                                        <span class="text-accent-fuchsia">{{ academic_rating }}% Rating</span>
+                                    </div>
+                                    <div
+                                        class="h-3 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden p-0.5">
+                                        <div class="h-full bg-gradient-to-r from-accent-fuchsia to-accent-rose rounded-full shadow-[0_0_10px_#d946ef] transition-all duration-700"
+                                            style="width: {{ academic_rating }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div
+                                    class="flex items-center gap-4 p-4 rounded-2xl bg-emerald-500/[0.03] border border-emerald-500/10">
+                                    <div
+                                        class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                                        <i class="fa-solid fa-chart-line"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-[9px] font-black text-slate-400 uppercase">Attendance Rate</p>
+                                        <p class="text-sm font-black text-emerald-600 uppercase tracking-tighter">
+                                            {{ attendance_rate }}% Stability</p>
+                                    </div>
+                                </div>
+
+
+                                <div
+                                    class="flex items-center gap-4 p-4 rounded-2xl bg-amber-500/[0.03] border border-amber-500/10">
+                                    <div
+                                        class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-[9px] font-black text-slate-400 uppercase">Alert Status</p>
+                                        <p class="text-sm font-black text-amber-600 uppercase tracking-tighter">
+                                            {{students_at_risk }} Profiles at Risk</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-card rounded-[3.5rem] p-10 flex flex-col items-center group relative overflow-hidden">
+                    <div class="flex flex-col items-center justify-center py-4 relative z-10">
+                        <span class="text-6xl font-black text-slate-800 dark:text-white tracking-tighter">
+                            {{ participating_students_count|default:"0" }}
+                        </span>
+                        <span
+                            class="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em] mt-2 text-center">
+                            Students Attended
+                        </span>
+                    </div>
+
+                    <div class="w-full mt-6 space-y-3 relative z-10">
+                        <div class="flex justify-between items-end px-1">
+                            <div class="flex flex-col">
+                                <span class="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                                    Reach: {{ participating_students_count }} / {{ student_count }} Students
+                                </span>
+                            </div>
+                            <span class="text-xs font-black text-indigo-500 tracking-tighter">
+                                {% widthratio participating_students_count student_count 100 %}%
+                            </span>
+                        </div>
+
+                        <div class="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full mt-2 overflow-hidden">
+                            <div class="h-full bg-indigo-500 transition-all duration-1000 ease-out"
+                                style="width: {% widthratio participating_students_count student_count 100 %}%">
+                            </div>
+                        </div>
+                        <p class="text-[7px] text-center font-bold text-slate-400 uppercase tracking-widest">
+                            Based on {{ quiz_count }} total quizzes conducted
+                        </p>
+                    </div>
+                </div>
+
+
+                <div class="glass-card rounded-[2.5rem] overflow-hidden border-2 border-slate-100 dark:border-white/5">
+                    <div class="p-8 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                        <h3 class="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">Enrolled
+                            Students</h3>
+                        <span
+                            class="px-4 py-1.5 rounded-xl bg-brand-500/10 text-brand-500 text-[10px] font-black uppercase">
+                            {{ students|length }} Active</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-slate-50/50 dark:bg-white/5">
+                                    <th
+                                        class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        Name</th>
+                                    <th
+                                        class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        Email</th>
+                                    <th
+                                        class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        Roll Number</th>
+                                    <th
+                                        class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
+                                        Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-white/5">
+                                {% for student in students %}
+                                <tr class="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                                    <td class="px-8 py-4 font-bold text-sm text-slate-700 dark:text-slate-200">
+                                        {{ student.name }}</td>
+                                    <td class="px-8 py-4 font-medium text-xs text-slate-500 dark:text-slate-400">
+                                        {{ student.email }}</td>
+                                    <td class="px-8 py-4 font-mono text-xs text-brand-500">
+                                        {{student.roll_no|default:"--" }}</td>
+                                    <td class="px-8 py-4 text-right">
+                                        <a href="{% url 'admin_student_performance' student.id %}">
+                                            <button
+                                                class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-brand-500 hover:scale-110 transition-transform">
+                                                <i class="fa-solid fa-eye text-xs"></i>
+                                            </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4"
+                                        class="px-8 py-12 text-center text-slate-400 font-bold uppercase text-xs tracking-widest">
+                                        No student records found in this class identity</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const targetRate = parseFloat("{{ completion_rate|default:0 }}");
+            const bar = document.getElementById('completion-bar');
+            const text = document.getElementById('completion-value');
+
+            // 1. Trigger the bar animation
+            setTimeout(() => {
+                bar.style.width = targetRate + '%';
+            }, 300);
+
+            // 2. Animate the number counter
+            let current = 0;
+            const duration = 2000; // Match CSS duration
+            const startTime = performance.now();
+
+            function updateCounter(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                // Ease out quadratic function
+                const easedProgress = progress * (2 - progress);
+                current = (easedProgress * targetRate).toFixed(1);
+
+                text.innerText = current + '%';
+
+                if (progress < 1) {
+                    requestAnimationFrame(updateCounter);
+                }
+            }
+
+            requestAnimationFrame(updateCounter);
+        });
+        // Spotlight effect
+        window.addEventListener('mousemove', e => {
+            const spotlight = document.getElementById('spotlight');
+            spotlight.style.setProperty('--x', `${e.clientX}px`);
+            spotlight.style.setProperty('--y', `${e.clientY}px`);
+        });
+
+        // Theme Toggle
+        const themeBtn = document.getElementById('theme-switch');
+        const themeIcon = document.getElementById('theme-icon');
+        themeBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            themeIcon.className = isDark ? 'fa-solid fa-sun text-lg text-amber-400' : 'fa-solid fa-moon text-brand-600 text-lg';
+        });
+
+        // Sidebar Control
+        const sidebar = document.getElementById('sidebar');
+        const closeBtn = document.getElementById('close-sidebar');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('evaluationChart');
+            if (!canvas) return; // Safety check
+
+            const ctx = canvas.getContext('2d');
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Distinction', 'Merit', 'Pass', 'Fail'],
+                    datasets: [{
+                        // DYNAMIC DATA: Defaulting to 0 if the variable is missing from context
+                        data: [
+                            {{ distinction_count|default:0 }},
+                            {{ merit_count|default:0 }},
+                            {{ pass_count|default:0 }},
+                            {{ fail_count|default:0 }}
+                        ],
+            backgroundColor: [
+            '#8b5cf6', // Brand 500
+            '#6366f1', // Indigo
+            '#10b981', // Emerald
+            '#f43f5e'  // Rose
+        ],
+            borderWidth: 0,
+            hoverOffset: 10
+                }]
+            },
+            options: {
+            cutout: '80%',
+            plugins: {
+                legend: { display: false }
+            },
+            responsive: true,
+            maintainAspectRatio: true
+        }
+        });
+    });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-active, .active, a[class*="bg-brand-500/10"][class*="text-white"], a[class*="bg-accent-fuchsia/10"][class*="text-white"], a[class*="bg-indigo-500/10"][class*="text-white"], a[class*="bg-emerald-500/10"][class*="text-white"]');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+
+</html>

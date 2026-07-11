@@ -1,0 +1,821 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Eduke | Student Performance Analytics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+  <script>
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+            accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+    html,
+    body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      position: fixed;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      letter-spacing: -0.01em;
+      background-color: #f8fafc;
+    }
+
+    .dark body {
+      background-color: #020617;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    #spotlight {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.12) 0%, transparent 40%);
+      z-index: 5;
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      z-index: 0;
+      opacity: 0.3;
+      animation: float 20s infinite alternate;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translate(0, 0);
+      }
+
+      100% {
+        transform: translate(80px, 40px);
+      }
+    }
+
+    .glass-sidebar {
+      background: rgba(10, 10, 20, 0.95);
+      backdrop-filter: blur(30px);
+      border-right: 1px solid rgba(139, 92, 246, 0.1);
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .dark .glass-card {
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-item-link {
+      position: relative;
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .nav-item-link.active {
+      color: #a78bfa !important;
+      background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+    }
+
+    .nav-item-link.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 25%;
+      height: 50%;
+      width: 4px;
+      background: #d946ef;
+      box-shadow: 0 0 15px #d946ef;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #8b5cf633;
+      border-radius: 10px;
+    }
+
+    @keyframes scan {
+      0% {
+        transform: translateY(-100%);
+      }
+
+      100% {
+        transform: translateY(100%);
+      }
+    }
+
+    .scanning {
+      animation: scan 2s linear infinite;
+    }
+  </style>
+</head>
+
+<body class="text-slate-900 dark:text-white">
+  <div id="spotlight"></div>
+  <div class="orb w-96 h-96 bg-brand-500 top-[-10%] left-[-10%]"></div>
+  <div class="orb w-80 h-80 bg-accent-indigo bottom-[10%] right-[5%]"></div>
+
+  <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+
+    <aside id="sidebar"
+      class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-full">
+      <div
+        class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5">
+
+        <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+          <div class="flex items-center gap-3 group cursor-pointer">
+            <div
+              class="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 group-hover:rotate-12 transition-transform animate-pulse bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 bg-[length:200%_200%]">
+              <img src="{% static 'main/images/logobase_white.png' %}" alt="Logo" class="w-6 h-6 object-contain">
+            </div>
+            <div>
+              <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span
+                  class="text-accent-fuchsia">.</span></h2>
+              <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Faculty Portal</p>
+            </div>
+          </div>
+          <button id="close-sidebar"
+            class="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white transition-all"><i
+              class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+
+        <nav class="flex-grow px-4 space-y-6 overflow-y-auto custom-scroll py-6">
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Management</p>
+            <div class="space-y-1">
+              <a href="{% url 'subject_head_dashboard' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-layer-group"></i><span class="font-bold text-sm">Dashboard</span>
+              </a>
+              <a href="#" class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-book"></i><span class="font-bold text-sm">Your Subject</span>
+              </a>
+              <a href="{% url 'subject_head_class' %}"
+                class="nav-item-link  active flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-chalkboard"></i><span class="font-bold text-sm">Your Class</span>
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Academic Tools</p>
+            <div class="space-y-1">
+              <a href="{% url 'subject_head_attendance' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-hand-point-up"></i><span class="font-bold text-sm">Attendance</span>
+              </a>
+              <a href="{% url 'subject_head_marks' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-user-pen"></i><span class="font-bold text-sm">Student Marks</span>
+              </a>
+              <a href="{% url 'subject_head_evaluation' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-square-poll-vertical"></i><span class="font-bold text-sm">Evaluation</span>
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Communication</p>
+            <div class="space-y-1">
+              <a href="{% url 'subject_head_chat' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-comments"></i><span class="font-bold text-sm">Eduke Chat</span>
+              </a>
+              <a href="{% url 'subject_head_profile' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-circle-user"></i><span class="font-bold text-sm">Profile</span>
+              </a>
+            </div>
+          </div>
+        </nav>
+
+        <div class="p-4 mt-auto">
+          <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3">
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 shadow-lg font-black text-white uppercase">
+                {{ subject_head|slice:":1" }}</div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-[11px] font-black text-white truncate uppercase">{{ subject_head }}</h4>
+                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Subject Head</p>
+              </div>
+            </div>
+            <a href="{% url 'logout' %}"
+              class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 hover:text-white transition-all">
+              <span class="text-[9px] font-black uppercase tracking-widest">Logout</span>
+              <i class="fa-solid fa-power-off text-[10px]"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+
+      <header class="h-24 flex items-center justify-between px-8 shrink-0">
+        <a href="{% url 'subject_head_class' %}"
+          class="group flex items-center gap-3 px-4 py-2 rounded-xl glass-card border border-brand-500/20 hover:bg-brand-500 hover:text-white transition-all duration-300">
+          <i class="fa-solid fa-chevron-left text-[10px] group-hover:-translate-x-1 transition-transform"></i>
+          <span class="text-[10px] font-black uppercase tracking-widest">Back</span>
+        </a>
+        <div class="flex items-center gap-6">
+          <button id="hamburger-button"
+            class="lg:hidden w-12 h-12 flex items-center justify-center rounded-2xl glass-card text-brand-600 shadow-lg"><i
+              class="fas fa-bars"></i></button>
+          <h2 class="text-2xl lg:text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic">
+            Registry <span class="text-brand-500">Analytics</span></h2>
+        </div>
+        <div class="flex items-center gap-4">
+          {% include 'subject_head/_notification_bell.html' %}
+          <button id="theme-switch" class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center hover:scale-110 transition-transform">
+            <i id="theme-icon" class="fa-solid fa-moon text-brand-600 text-lg"></i>
+          </button>
+        </div>
+      </header>
+
+      <div id="content-wrapper" class="flex-1 overflow-y-auto px-4 lg:px-8 pb-12 space-y-8 custom-scroll">
+
+        <section
+          class="relative group p-8 md:p-10 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-[0_20px_50px_rgba(0,0,0,0.04)] overflow-hidden transition-all duration-500">
+
+          <div
+            class="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-brand-500/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+          </div>
+          <div class="absolute -right-10 -top-10 w-64 h-64 bg-brand-500/5 rounded-full blur-[80px]"></div>
+
+          <div class="relative z-10 flex flex-col lg:flex-row items-center lg:items-stretch gap-10">
+
+            <div class="flex items-center gap-6 pr-10 lg:border-r border-slate-100 dark:border-slate-800/50">
+              <div class="relative">
+                <div
+                  class="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-brand-500 to-indigo-600 p-[2px] shadow-lg shadow-brand-500/20 rotate-3 group-hover:rotate-0 transition-transform duration-500">
+                  <div
+                    class="w-full h-full rounded-[1.9rem] bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden">
+                    <span
+                      class="text-3xl font-black bg-gradient-to-br from-brand-500 to-indigo-600 bg-clip-text text-transparent">
+                      {{ student.name|slice:":1" }}
+                    </span>
+                  </div>
+                </div>
+                <div
+                  class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 border-4 border-white dark:border-slate-900 shadow-sm">
+                </div>
+              </div>
+
+              <div class="space-y-1">
+                <p class="text-[10px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-[0.3em]">
+                  Identity_Verified</p>
+                <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">
+                  {{ student.name }}
+                </h1>
+                <div class="flex items-center gap-2 pt-1">
+                  <i class="fa-regular fa-envelope text-slate-400 text-[10px]"></i>
+                  <p class="text-xs text-slate-500 font-bold lowercase">{{ student.email }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-8 w-full py-2">
+              <div class="flex flex-col justify-center gap-1">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-fingerprint text-brand-500 text-[10px]"></i>
+                  <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Node_Registry</p>
+                </div>
+                <p class="text-xl font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tighter">
+                  Roll Index: <span class="text-brand-600">#{{ student.roll_no }}</span>
+                </p>
+              </div>
+
+              <div class="flex flex-col justify-center gap-1">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-layer-group text-brand-500 text-[10px]"></i>
+                  <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Academic_Sector</p>
+                </div>
+                <p class="text-xl font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tighter">
+                  Class : <span class="text-brand-600"> {{ student.class_name }}</span>
+                </p>
+              </div>
+            </div>
+
+            <div
+              class="flex lg:flex-col items-center justify-center gap-4 pl-10 lg:border-l border-slate-100 dark:border-slate-800/50">
+              <div class="px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span
+                  class="text-emerald-600 dark:text-emerald-400 font-black text-[10px] uppercase tracking-widest">Active_Node</span>
+              </div>
+              <p class="hidden lg:block text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Last_Sync: Today
+              </p>
+            </div>
+
+          </div>
+        </section>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+          <div
+            class="relative group p-8 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.02)] overflow-hidden transition-all duration-500 hover:shadow-purple-500/10 hover:-translate-y-1">
+            <div
+              class="absolute -right-4 -bottom-4 w-24 h-24 bg-purple-500/5 rounded-full blur-3xl group-hover:bg-purple-500/10 transition-colors">
+            </div>
+
+            <div class="relative z-10 flex flex-col items-center">
+              <div
+                class="w-14 h-14 rounded-2xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 border border-purple-100 dark:border-purple-500/20 flex items-center justify-center mb-5 transition-all duration-500 group-hover:rotate-[10deg] group-hover:scale-110 shadow-sm">
+                <i class="fa-solid fa-chart-line text-xl"></i>
+              </div>
+
+              <p class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-2">
+                Marks_Index</p>
+
+              <div class="flex items-baseline gap-1">
+                <span class="text-5xl font-black text-slate-900 dark:text-white tracking-tighter">
+                  {{ evaluations.marks_percentage|default:"0"}}
+                </span>
+                <span class="text-purple-500 font-black text-xl">%</span>
+              </div>
+
+              <div
+                class="mt-4 px-3 py-1 rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                <span
+                  class="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter">Performance_Node</span>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="relative group p-8 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.02)] overflow-hidden transition-all duration-500 hover:shadow-blue-500/10 hover:-translate-y-1">
+            <div
+              class="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-colors">
+            </div>
+
+            <div class="relative z-10 flex flex-col items-center">
+              <div
+                class="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center mb-5 transition-all duration-500 group-hover:rotate-[-10deg] group-hover:scale-110 shadow-sm">
+                <i class="fa-solid fa-calendar-check text-xl"></i>
+              </div>
+
+              <p class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-2">
+                Attendance_Stability</p>
+
+              <div class="flex items-baseline gap-1">
+                <span class="text-5xl font-black text-slate-900 dark:text-white tracking-tighter">
+                  {{ evaluations.attendance_percentage|default:"0" }}
+                </span>
+                <span class="text-blue-500 font-black text-xl">%</span>
+              </div>
+
+              <div
+                class="mt-4 px-3 py-1 rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                <span
+                  class="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter">Consistency_Check</span>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="relative group p-8 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.02)] overflow-hidden transition-all duration-500 hover:shadow-emerald-500/10 hover:-translate-y-1">
+            <div
+              class="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-colors">
+            </div>
+
+            <div class="relative z-10 flex flex-col items-center">
+              <div
+                class="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 border border-emerald-100 dark:border-emerald-500/20 flex items-center justify-center mb-5 transition-all duration-500 group-hover:rotate-[10deg] group-hover:scale-110 shadow-sm">
+                <i class="fa-solid fa-bolt text-xl"></i>
+              </div>
+
+              <p class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-2">
+                Quiz_Proficiency</p>
+
+              <div class="flex items-baseline gap-1">
+                <span class="text-5xl font-black text-slate-900 dark:text-white tracking-tighter">
+                  {{ quiz_percentage }}
+                </span>
+                <span class="text-emerald-500 font-black text-xl">%</span>
+              </div>
+
+              <div
+                class="mt-4 px-3 py-1 rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>
+                <span
+                  class="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter">Knowledge_Pulse</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <section
+          class="relative group p-8 md:p-10 rounded-[3rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-[0_20px_60px_rgba(0,0,0,0.04)] overflow-hidden transition-all duration-500">
+
+          <div class="absolute inset-0 opacity-[0.03] dark:opacity-[0.07] pointer-events-none"
+            style="background-image: linear-gradient(#4f46e5 1px, transparent 1px), linear-gradient(90deg, #4f46e5 1px, transparent 1px); background-size: 40px 40px;">
+          </div>
+
+          <div class="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="relative flex h-2 w-2">
+                  <span
+                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
+                </span>
+                <h3 class="text-[11px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-[0.3em]">
+                  Telemetry_Stream
+                </h3>
+              </div>
+              <h2 class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">
+                Performance_Sequence_Matrix
+              </h2>
+            </div>
+
+            <div
+              class="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-2xl border border-slate-200/50 dark:border-slate-700/50">
+              <button
+                class="px-4 py-1.5 rounded-xl bg-white dark:bg-slate-700 shadow-sm text-[10px] font-bold text-brand-600 dark:text-white uppercase tracking-widest">Live</button>
+
+            </div>
+          </div>
+
+          <div class="relative z-10 h-[420px] w-full">
+            <div class="absolute top-0 right-0 flex gap-4 pointer-events-none">
+              <div class="flex flex-col items-end">
+                <span
+                  class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Peak_Efficiency</span>
+                <span class="text-lg font-black text-emerald-500 tracking-tighter">98.4%</span>
+              </div>
+              <div class="flex flex-col items-end border-l border-slate-100 dark:border-slate-800 pl-4">
+                <span
+                  class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Stability_Index</span>
+                <span class="text-lg font-black text-brand-500 tracking-tighter">0.92</span>
+              </div>
+            </div>
+
+            <canvas id="performanceChart"></canvas>
+          </div>
+
+          <div class="relative z-10 mt-6 pt-6 border-t border-slate-50 dark:border-slate-800/50 flex flex-wrap gap-6">
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full bg-brand-500 shadow-[0_0_8px_rgba(79,70,229,0.5)]"></div>
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active_Evaluations</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Global_Mean</span>
+            </div>
+          </div>
+        </section>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {% for key, val in evaluations.items %}
+          {% if "_rating" in key %}
+
+          {# STEP 1: Normalize 0-100 down to 0-5 #}
+          {# This calculates: (val / 20) * 1 #}
+          {% widthratio val 20 1 as normalized_val %}
+
+          <div
+            class="relative group p-6 rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-[0_10px_30px_rgba(0,0,0,0.02)] transition-all duration-500 hover:-translate-y-1">
+
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+                {{ key|cut:"_rating"|upper }}_NODE
+              </p>
+              {# Status pulse based on percentage #}
+              <div
+                class="w-2 h-2 rounded-full {% if val >= 80 %} bg-emerald-500 {% elif val >= 40 %} bg-amber-500 {% else %} bg-rose-500 {% endif %} animate-pulse">
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div class="flex items-end gap-2">
+                <span class="text-3xl font-black text-slate-900 dark:text-white leading-none tracking-tighter">
+                  {{ val|default:"0" }}
+                </span>
+                <span class="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">/ 100.0</span>
+              </div>
+
+              <div class="flex items-center gap-1.5 h-2 w-full">
+                {# STEP 2: Loop 5 times and compare counter to normalized_val #}
+                {% for i in "12345" %}
+                <div class="flex-1 h-full rounded-full transition-all duration-700 
+              {% if forloop.counter <= normalized_val|add:0 %}
+                bg-gradient-to-r from-brand-500 to-brand-400 shadow-[0_0_10px_rgba(99,102,241,0.3)]
+              {% else %}
+                bg-slate-100 dark:bg-slate-800
+              {% endif %}">
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-slate-50 dark:border-slate-800/50">
+              <p class="text-[8px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-tighter">
+                Stability Index: {% if val >= 75 %}Optimized{% elif val >= 40 %}Stable{% else %}Analyzing{% endif %}
+              </p>
+            </div>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+
+        <section
+          class="relative group p-10 rounded-[3rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-[0_20px_50px_rgba(0,0,0,0.04)] overflow-hidden transition-all duration-700">
+
+          <div class="absolute inset-0 opacity-[0.03] dark:opacity-[0.1] pointer-events-none"
+            style="background-image: radial-gradient(#6366f1 0.5px, transparent 0.5px); background-size: 24px 24px;">
+          </div>
+
+          <div id="scan-line"
+            class="absolute inset-0 bg-gradient-to-b from-transparent via-brand-500/20 to-transparent -translate-y-full pointer-events-none z-0 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+          </div>
+
+          <div class="flex flex-col md:flex-row items-start justify-between gap-10 relative z-10">
+
+            <div class="max-w-xl min-h-[220px] flex flex-col justify-between">
+              <div>
+                <div class="flex items-center gap-5 mb-6">
+                  <div class="relative">
+                    <div
+                      class="w-14 h-14 rounded-2xl bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 shadow-xl group-hover:rotate-[360deg] transition-transform duration-1000">
+                      <i class="fa-solid fa-microchip text-xl"></i>
+                    </div>
+                    <div
+                      class="absolute -inset-2 border-2 border-dashed border-brand-500/30 rounded-full animate-[spin_10s_linear_infinite]">
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3
+                      class="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic leading-none">
+                      Neural <span class="text-brand-500">Prediction</span> Node
+                    </h3>
+                    <p
+                      class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2 flex items-center gap-2">
+                      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      System_Online // Core_v4.0
+                    </p>
+                  </div>
+                </div>
+
+                <p class="text-slate-500 dark:text-slate-400 text-sm font-medium leading-relaxed max-w-md">
+                  Aggregating attendance dynamics, internal metrics, and behavioral nodes to project end-of-term
+                  academic outcomes with <span class="text-slate-800 dark:text-slate-200 font-bold">94.2%
+                    accuracy</span>.
+                </p>
+              </div>
+
+             <div id="prediction-result" 
+     class="hidden mt-8 p-8 rounded-[3rem] bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-brand-500/30 shadow-[0_0_40px_rgba(99,102,241,0.1)] relative overflow-hidden group/result transition-all duration-700">
+    
+    <div class="absolute -top-10 -right-10 w-32 h-32 bg-brand-500/20 blur-[50px] rounded-full animate-pulse"></div>
+    <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-500/20 blur-[50px] rounded-full"></div>
+
+    <div class="flex items-center justify-between mb-6 relative z-10">
+        <p class="text-[10px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-[0.4em]">
+            Projected_Synthesis
+        </p>
+        <span class="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-black text-emerald-500 uppercase tracking-widest">
+            High_Confidence
+        </span>
+    </div>
+
+    <div class="relative flex flex-col items-center justify-center py-4">
+        
+        <div class="absolute w-40 h-40 border border-brand-500/10 rounded-full animate-[spin_8s_linear_infinite]"></div>
+        <div class="absolute w-44 h-44 border-t-2 border-brand-500/40 rounded-full animate-[spin_3s_ease-in-out_infinite]"></div>
+
+        <div class="relative flex items-baseline justify-center gap-1 group-hover/result:scale-110 transition-transform duration-500">
+            <span class="text-7xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none text-center">
+                <span id="predicted-marks" 
+                      class="bg-gradient-to-br from-brand-600 via-indigo-500 to-brand-400 bg-clip-text text-transparent filter drop-shadow-sm">
+                    --
+                </span>
+            </span>
+            <span class="text-2xl font-black text-brand-500 italic"></span>
+        </div>
+        
+    </div>
+
+    <div class="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-brand-500/30 rounded-bl-lg"></div>
+    <div class="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-brand-500/30 rounded-br-lg"></div>
+</div>
+            </div>
+
+            <div class="relative shrink-0 md:pt-6">
+              <button id="predict-btn"
+                class="relative z-10 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-[11px] uppercase tracking-[0.4em] px-14 py-7 rounded-[2rem] hover:shadow-[0_20px_50px_rgba(99,102,241,0.3)] dark:hover:shadow-[0_20px_50px_rgba(255,255,255,0.1)] transition-all active:scale-95 flex items-center gap-4 group overflow-hidden">
+                <div
+                  class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000">
+                </div>
+
+                <span id="btn-content">Execute Analysis Node</span>
+                <i class="fa-solid fa-atom text-sm group-hover:rotate-180 transition-transform duration-700"></i>
+              </button>
+
+              <p
+                class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[8px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                Request_Node_ID: #XP-990
+              </p>
+            </div>
+          </div>
+
+          <div
+            class="absolute -right-20 -bottom-20 w-96 h-96 bg-brand-500/10 rounded-full blur-[120px] pointer-events-none group-hover:bg-brand-500/20 transition-colors duration-1000">
+          </div>
+        </section>
+
+
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // System Visuals
+    window.addEventListener('mousemove', e => {
+      document.getElementById('spotlight').style.setProperty('--x', `${e.clientX}px`);
+      document.getElementById('spotlight').style.setProperty('--y', `${e.clientY}px`);
+    });
+
+    // Chart Configuration
+    let chartInstance = null;
+    const graphData = JSON.parse("{{ graph_data|safe }}");
+
+    function initChart(data) {
+      const ctx = document.getElementById('performanceChart').getContext('2d');
+
+      // Gradient creation
+      const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+      gradient.addColorStop(0, '#7c3aed');
+      gradient.addColorStop(1, 'rgba(124, 58, 237, 0.1)');
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ["Marks", "Attendance", "Study", "Sleep", "Class Pt.", "Activity", "Quiz"],
+          datasets: [{
+            label: 'Efficiency Index',
+            data: data,
+            backgroundColor: gradient,
+            borderRadius: 12,
+            borderWidth: 0,
+            barThickness: 40
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } } },
+            y: { beginAtZero: true, max: 100, grid: { color: 'rgba(148, 163, 184, 0.1)' }, ticks: { color: '#94a3b8' } }
+          }
+        }
+      });
+    }
+
+
+
+    // Theme Logic
+    const themeSwitch = document.getElementById('theme-switch');
+    const themeIcon = document.getElementById('theme-icon');
+    
+    // Initialize theme icon based on current theme
+    if (document.documentElement.classList.contains('dark')) {
+      themeIcon.className = 'fa-solid fa-sun text-yellow-400 text-lg';
+    } else {
+      themeIcon.className = 'fa-solid fa-moon text-brand-600 text-lg';
+    }
+    
+    themeSwitch.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      const isDark = document.documentElement.classList.contains('dark');
+      localStorage.theme = isDark ? 'dark' : 'light';
+      themeIcon.className = isDark ? 'fa-solid fa-sun text-yellow-400 text-lg' : 'fa-solid fa-moon text-brand-600 text-lg';
+    });
+
+    // Sidebar Toggles
+    const hamBtn = document.getElementById('hamburger-button');
+    const sidebar = document.getElementById('sidebar');
+    const closeBtn = document.getElementById('close-sidebar');
+    hamBtn.addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+    closeBtn.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+
+
+    document.addEventListener("DOMContentLoaded", () => initChart(graphData));
+
+    let dismissalTimer;
+    let isProcessing = false;
+
+    document.getElementById("predict-btn").addEventListener("click", function () {
+      // Prevent clicking if already processing or showing result
+      if (isProcessing) return;
+
+      const btn = this;
+      const btnContent = document.getElementById("btn-content");
+      const resultDiv = document.getElementById("prediction-result");
+      const scanLine = document.getElementById("scan-line");
+      const marksSpan = document.getElementById("predicted-marks");
+
+      isProcessing = true; // Lock the button
+      clearTimeout(dismissalTimer);
+
+      // 1. UI Loading State
+      btn.disabled = true;
+      btn.classList.add('opacity-50', 'cursor-not-allowed');
+      btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> Processing...';
+      if (scanLine) scanLine.classList.add('scanning');
+
+      // 2. Fetch Logic
+      fetch(window.location.href, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+        .then(r => r.json())
+        .then(data => {
+          // Display Result
+          resultDiv.classList.remove("hidden", "animate-out", "fade-out");
+          resultDiv.classList.add("animate-in", "fade-in", "zoom-in", "duration-500");
+          marksSpan.textContent = (data.predicted_marks || "N/A") + "%";
+
+          // Cleanup Scanning
+          if (scanLine) scanLine.classList.remove('scanning');
+          btn.innerHTML = '<i class="fa-solid fa-lock text-[10px]"></i> Cooling Down...';
+
+          // 3. Auto-Dismiss after 8 seconds
+          dismissalTimer = setTimeout(() => {
+            // Exit Animation
+            resultDiv.classList.remove("animate-in", "fade-in", "zoom-in");
+            resultDiv.classList.add("animate-out", "fade-out", "duration-700");
+
+            setTimeout(() => {
+              resultDiv.classList.add("hidden");
+
+              // 4. UNLOCK button only after dismissal is complete
+              isProcessing = false;
+              btn.disabled = false;
+              btn.classList.remove('opacity-50', 'cursor-not-allowed');
+              btn.innerHTML = 'Execute Analysis Node <i class="fa-solid fa-chevron-right text-[10px]"></i>';
+            }, 700);
+          }, 8000);
+        })
+        .catch(err => {
+          isProcessing = false;
+          btn.disabled = false;
+          btn.innerHTML = 'Execute Analysis Node';
+          console.error("Analysis Failed", err);
+        });
+    });
+  </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-link.active');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+
+</html>

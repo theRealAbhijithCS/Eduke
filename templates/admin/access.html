@@ -1,0 +1,920 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduke | Access Logs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{% static 'main/mages/logobase_white.png' %}">
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa',
+                            500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95',
+                        },
+                        accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b' }
+                    },
+                    borderRadius: { '4xl': '2rem', '5xl': '3rem', '6xl': '4rem' }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            letter-spacing: -0.01em;
+            background-color: #f8fafc;
+            overflow: hidden;
+            /* Remove scrollbar from body */
+        }
+
+        .dark body {
+            background-color: #020617;
+        }
+
+        /* Ultra Glassmorphism */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-sidebar {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Remove scrollbars completely */
+        ::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+
+        /* Enable scrollbars for elements with custom-scroll class */
+        .custom-scroll::-webkit-scrollbar {
+            display: block !important;
+            width: 10px !important;
+            height: 10px !important;
+        }
+
+        .custom-scroll {
+            -ms-overflow-style: none;
+            /* IE and Edge */
+            scrollbar-width: none;
+            /* Firefox */
+        }
+
+        /* Style for dropdown options in dark mode */
+        select {
+            background-repeat: no-repeat;
+            background-position: right 0.7rem center;
+            background-size: 0.8rem;
+            padding-right: 2rem !important;
+            appearance: none;
+            /* Hide default dropdown arrow in all browsers */
+            -webkit-appearance: none;
+            /* Safari/Chrome */
+            -moz-appearance: none;
+            /* Firefox */
+        }
+
+
+        /* Ensure dropdown options are visible in both light and dark modes */
+        option {
+            background-color: white !important;
+            color: #374151 !important;
+        }
+
+        .dark option {
+            background-color: #1f2937 !important;
+            color: #f9fafb !important;
+        }
+
+        /* Print-specific styles */
+        @media print {
+
+            /* Hide all elements except the print content */
+            body *:not(#print-content):not(#print-content *) {
+                visibility: hidden !important;
+                display: none !important;
+            }
+
+            #print-content {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                visibility: visible !important;
+                display: block !important;
+                z-index: 10000 !important;
+                color: black !important;
+                background: white !important;
+            }
+
+            #print-content * {
+                visibility: visible !important;
+                color: black !important;
+                background: white !important;
+            }
+        }
+
+        @keyframes color-cycle {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .animate-color-cycle {
+            animation: color-cycle 10s ease infinite;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      /* IE and Edge */
+      scrollbar-width: none;
+      /* Firefox */
+    }
+
+    /* Custom scrollbar for table container - FORCE VISIBILITY */
+    .custom-scroll::-webkit-scrollbar {
+      width: 10px !important;
+      height: 10px !important;
+      display: block !important;
+    }
+
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1) !important;
+      border-radius: 10px;
+      box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #8b5cf6, #a78bfa) !important;
+      border-radius: 10px;
+      border: 2px solid rgba(255, 255, 255, 0.2) !important;
+      transition: all 0.3s ease;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #7c3aed, #8b5cf6) !important;
+    }
+
+    /* Dark mode scrollbar */
+    .dark .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.08) !important;
+    }
+
+    .dark .custom-scroll::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #6366f1, #8b5cf6) !important;
+    }
+
+    .dark .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #4f46e5, #7c3aed) !important;
+    }
+    </style>
+</head>
+
+<body class="antialiased">
+    {% load static %}
+    <div class="relative z-10 flex h-[100dvh] w-full p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+
+       <aside id="sidebar"
+      class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-[100dvh] lg:h-full">
+
+      <div
+        class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5 bg-[#0a0a14]/80 backdrop-blur-xl">
+
+        <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+          <div class="flex items-center gap-3 group cursor-pointer">
+            <div
+              class="w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 dark:border-white/10 bg-white/10 dark:bg-white/5 group-hover:rotate-12 transition-transform animate-pulse bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 bg-[length:200%_200%]">
+              <img src="{% static 'main/images/logobase_white.png' %}" alt="Eduke Logo"
+                class="w-6 h-6 object-contain animate-color-cycle">
+            </div>
+            <div>
+              <h2 class="text-xl font-black tracking-tighter text-white uppercase text-nowrap">
+                Eduke<span class="text-accent-fuchsia">.</span>
+              </h2>
+              <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Portal</p>
+            </div>
+          </div>
+
+          <button id="close-sidebar"
+            class="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white transition-all">
+            <i class="fa-solid fa-xmark text-xl"></i>
+          </button>
+        </div>
+
+        <nav class="flex-grow px-4 space-y-4 overflow-y-auto no-scrollbar py-2">
+
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Command</p>
+            <div class="space-y-1">
+
+               <a href="{% url 'admin_dashboard' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                        {% if request.resolver_match.url_name == 'admin_dashboard' or request.resolver_match.url_name == 'access_logs' %} 
+                            active bg-brand-500/10 border border-brand-500/20 text-white 
+                        {% else %} 
+                             text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+                        {% endif %}">
+
+                {% if request.resolver_match.url_name == 'admin_dashboard' or request.resolver_match.url_name == 'access_logs' %}
+                <span class="absolute left-2 w-1 h-4 bg-accent-fuchsia rounded-full shadow-[0_0_10px_#d946ef]"></span>
+                {% endif %}
+
+                <i
+                  class="fa-solid fa-layer-group text-base {% if request.resolver_match.url_name == 'admin_dashboard' or request.resolver_match.url_name == 'access_logs'%} text-brand-400 {% else %} group-hover:text-brand-400 {% endif %}"></i>
+                <span class="font-bold text-sm">Dashboard</span>
+              </a>
+
+              <a href="{% url 'admin_students' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                        {% if request.resolver_match.url_name == 'admin_students' %} 
+                            bg-accent-fuchsia/10 border border-accent-fuchsia/20 text-white 
+                        {% else %} 
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+                        {% endif %}">
+
+                {% if request.resolver_match.url_name == 'admin_students' %}
+                <span class="absolute left-2 w-1 h-4 bg-accent-fuchsia rounded-full shadow-[0_0_10px_#d946ef]"></span>
+                {% endif %}
+
+                <i
+                  class="fa-solid fa-user-shield text-base {% if request.resolver_match.url_name == 'admin_students' %} text-accent-fuchsia {% else %} group-hover:text-accent-fuchsia {% endif %}"></i>
+                <span class="font-bold text-sm">Students</span>
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Operations
+            </p>
+            <div class="space-y-1">
+
+              <a href="{% url 'admin_classes' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                        {% if request.resolver_match.url_name == 'admin_classes' %} 
+                            bg-indigo-500/10 border border-indigo-500/20 text-white 
+                        {% else %} 
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+                        {% endif %}">
+
+                {% if request.resolver_match.url_name == 'admin_classes' %}
+                <span class="absolute left-2 w-1 h-4 bg-indigo-500 rounded-full shadow-[0_0_10px_#6366f1]"></span>
+                {% endif %}
+
+                <i
+                  class="fa-solid fa-chalkboard-user text-base {% if request.resolver_match.url_name == 'admin_classes' %} text-indigo-400 {% else %} group-hover:text-indigo-400 {% endif %}"></i>
+                <span class="font-bold text-sm">Manage Classes</span>
+              </a>
+
+              <a href="{% url 'admin_subjects' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                        {% if request.resolver_match.url_name == 'admin_subjects' %} 
+                            bg-emerald-500/10 border border-emerald-500/20 text-white 
+                        {% else %} 
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+                        {% endif %}">
+
+                {% if request.resolver_match.url_name == 'admin_subjects' %}
+                <span class="absolute left-2 w-1 h-4 bg-emerald-500 rounded-full shadow-[0_0_10px_#10b981]"></span>
+                {% endif %}
+
+                <i
+                  class="fa-solid fa-book-open-reader text-base {% if request.resolver_match.url_name == 'admin_subjects' %} text-emerald-400 {% else %} group-hover:text-emerald-400 {% endif %}"></i>
+                <span class="font-bold text-sm">Subject Head</span>
+              </a>
+
+                <a href="{% url 'admin_reports' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+    {% if request.resolver_match.url_name == 'admin_reports' %} 
+        bg-indigo-500/10 border border-indigo-500/20 text-white 
+    {% else %} 
+        text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+    {% endif %}">
+
+    {% if request.resolver_match.url_name == 'admin_reports' %}
+    <span class="absolute left-2 w-1 h-4 bg-indigo-500 rounded-full shadow-[0_0_10px_#6366f1]"></span>
+    {% endif %}
+
+    <i class="fa-solid fa-chart-pie text-base 
+        {% if request.resolver_match.url_name == 'admin_reports' %} text-indigo-400 {% else %} group-hover:text-indigo-400 {% endif %}"></i>
+    
+    <span class="font-bold text-sm">Reports Hub</span>
+</a>
+
+
+            </div>
+          </div>
+
+          
+
+          <div class="pt-2">
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">User</p>
+            <div class="space-y-1">
+              <a href="{% url 'admin_profile' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                        {% if request.resolver_match.url_name == 'admin_profile' %} 
+                            bg-brand-500/10 border border-brand-500/20 text-white 
+                        {% else %} 
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent 
+                        {% endif %}">
+
+                {% if request.resolver_match.url_name == 'admin_profile' %}
+                <span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>
+                {% endif %}
+
+                <i
+                  class="fa-solid fa-circle-user text-base {% if request.resolver_match.url_name == 'admin_profile' %} text-brand-400 {% else %} group-hover:text-brand-400 {% endif %}"></i>
+                <span class="font-bold text-sm">{{ institution.institution_abbreviation|default:"User" }}
+                  Profile</span>
+              </a>
+            </div>
+          </div>
+        </nav>
+
+        <div class="p-4 shrink-0 mt-auto lg:mb-0">
+          <div
+            class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3 transition-all hover:border-white/20">
+            <div class="flex items-center gap-3">
+              <div class="relative flex-shrink-0">
+                <div
+                  class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 shadow-lg">
+                  <span class="text-[11px] font-black text-white uppercase">
+                    {{ institution.institution_abbreviation|default:"EDU" }}
+                  </span>
+                </div>
+                <div
+                  class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-[#0a0a14] rounded-full">
+                </div>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-[11px] font-black text-white truncate tracking-tight mb-0.5">
+                  {{ "Eduke Institution" }}
+                </h4>
+                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none">Admin</p>
+              </div>
+
+            </div>
+
+            <div class="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+
+            <a href="{% url 'logout' %}"
+              class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 hover:border-rose-500 transition-all duration-300">
+              <span
+                class="text-[9px] font-black uppercase tracking-widest text-rose-400 group-hover/btn:text-white">Logout</span>
+              <i
+                class="fa-solid fa-power-off text-[10px] text-rose-500 group-hover/btn:text-white transition-colors"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+        <main class="flex-1 h-full overflow-hidden relative flex flex-col">
+            <header class="flex items-center justify-between p-6 pb-0 lg:hidden">
+                <button id="open-sidebar"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl glass-card text-slate-600 dark:text-slate-400 hover:text-brand-500 transition-colors">
+                    <i class="fa-solid fa-bars-staggered"></i>
+                </button>
+                <div class="flex items-center gap-3">
+                    <span class="font-black text-lg text-slate-900 dark:text-white uppercase tracking-tighter">System
+                        Log</span>
+                </div>
+                <!-- Theme Toggle -->
+                <button id="theme-toggle-mobile"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl glass-card text-slate-600 dark:text-slate-400 hover:text-brand-500 transition-colors">
+                    <i class="fa-solid fa-moon dark:hidden"></i>
+                    <i class="fa-solid fa-sun hidden dark:block"></i>
+                </button>
+            </header>
+
+            <div
+                class="space-y-6 animate-in fade-in duration-700 max-w-7xl mx-auto h-full overflow-hidden flex flex-col p-6 lg:p-8">
+
+                <!-- Header Section -->
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                    <div>
+                        <a href="{% url 'admin_dashboard' %}"
+                            class="flex items-center gap-2 mb-2 text-slate-400 hover:text-brand-500 transition-colors group">
+                            <i class="fa-solid fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
+                            <span class="text-xs font-bold uppercase tracking-widest">Back to Dashboard</span>
+                        </a>
+                        <h1
+                            class="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">
+                            Neural <span class="text-brand-500">Registry</span>
+                        </h1>
+                        <div class="flex items-center gap-2 mt-2">
+                            <span class="relative flex h-2 w-2">
+                                <span
+                                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Live Security
+                                Feed / Sector 7</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                        <!-- Filter Dropdown -->
+                        <div class="relative">
+                            <select id="actionFilter"
+                                class="appearance-none bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 rounded-2xl py-2.5 pl-4 pr-10 text-[10px] font-black uppercase tracking-widest outline-none focus:border-brand-500/50 transition-all cursor-pointer backdrop-blur-md">
+                                <option value="all">All Actions</option>
+                                <option value="login">Login Events</option>
+                                <option value="logout">Logout Events</option>
+                            </select>
+                            <i
+                                class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
+                        </div>
+
+                        <!-- Search -->
+                        <div class="relative flex-1 lg:w-64">
+                            <i
+                                class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" id="logSearch" placeholder="SEARCH LOGS..."
+                                class="w-full bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl py-2.5 pl-10 pr-4 text-[10px] font-black uppercase tracking-widest outline-none focus:border-brand-500/50 transition-all backdrop-blur-md dark:text-white placeholder-slate-400">
+                        </div>
+
+                        <!-- Print Button -->
+                        <button onclick="printLogs()"
+                            class="w-11 h-11 flex items-center justify-center rounded-2xl glass-card hover:text-brand-500 transition-all text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10 hover:border-brand-500/50">
+                            <i class="fa-solid fa-print"></i>
+                        </button>
+
+                        <!-- Refresh -->
+                        <button onclick="window.location.reload()"
+                            class="w-11 h-11 flex items-center justify-center rounded-2xl glass-card hover:text-brand-500 transition-all text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10 hover:border-brand-500/50 hover:rotate-180 active:scale-95">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+
+
+                        <!-- Theme Toggle (Desktop only) -->
+                        <button id="theme-toggle"
+                            class="w-11 h-11 flex items-center justify-center rounded-2xl glass-card text-slate-500 dark:text-slate-400 hover:text-brand-500 transition-all border border-slate-200 dark:border-white/10 hover:border-brand-500/50 hidden lg:flex">
+                            <i class="fa-solid fa-moon dark:hidden"></i>
+                            <i class="fa-solid fa-sun hidden dark:block"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mobile Cards (Visible on small screens) -->
+                <div class="grid grid-cols-1 gap-4 lg:hidden" id="mobileLogContainer">
+                    {% for log in logs %}
+                    <div class="glass-card rounded-3xl p-5 relative overflow-hidden group mobile-log-card"
+                        data-action="{{ log.action }}">
+                        <div
+                            class="absolute top-0 left-0 w-1 h-full {% if log.status %}bg-emerald-500{% else %}bg-rose-500{% endif %}">
+                        </div>
+
+                        <div class="flex justify-between items-start mb-4 pl-3">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-white/5 dark:to-white/10 flex items-center justify-center font-black text-[10px] text-slate-600 dark:text-slate-400 border border-white/10">
+                                    {{ log.user_prefix }}
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-slate-800 dark:text-white leading-tight">
+                                        {{ log.username }}</h4>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+                                        Authorized Node</p>
+                                </div>
+                            </div>
+                            <span class="text-[9px] font-mono text-slate-400">#{{ forloop.counter }}</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 pl-3 mb-4">
+                            <div
+                                class="bg-slate-50/50 dark:bg-white/5 rounded-xl p-3 border border-slate-100 dark:border-white/5">
+                                <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Action
+                                </p>
+                                {% if log.action == 'login' %}
+                                <span class="inline-flex items-center gap-1.5 text-emerald-500">
+                                    <i class="fa-solid fa-right-to-bracket text-[10px]"></i>
+                                    <span class="text-[10px] font-bold uppercase">Login</span>
+                                </span>
+                                {% elif log.action == 'logout' %}
+                                <span class="inline-flex items-center gap-1.5 text-slate-500">
+                                    <i class="fa-solid fa-right-from-bracket text-[10px]"></i>
+                                    <span class="text-[10px] font-bold uppercase">Logout</span>
+                                </span>
+                                {% else %}
+                                <span class="text-[10px] font-bold text-slate-500 uppercase">{{ log.action }}</span>
+                                {% endif %}
+                            </div>
+                            <div
+                                class="bg-slate-50/50 dark:bg-white/5 rounded-xl p-3 border border-slate-100 dark:border-white/5">
+                                <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Network
+                                </p>
+                                <p class="text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300">{{ log.ip
+                                    }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            class="flex items-center justify-between pl-3 pt-3 border-t border-slate-100 dark:border-white/5">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-regular fa-clock text-slate-400 text-xs"></i>
+                                <div class="flex flex-col">
+                                    <span
+                                        class="text-[9px] font-bold text-slate-700 dark:text-slate-300 uppercase leading-none">
+                                        {{ log.date }}</span>
+                                    <span class="text-[8px] font-bold text-slate-400 uppercase leading-none mt-0.5">
+                                        {{ log.time }}</span>
+                                </div>
+                            </div>
+
+                            <span
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full {% if log.status %}bg-emerald-500/10 text-emerald-500{% else %}bg-rose-500/10 text-rose-500{% endif %} text-[9px] font-black uppercase tracking-widest border border-current/10">
+                                <span
+                                    class="w-1 h-1 rounded-full {% if log.status %}bg-emerald-500 animate-pulse{% else %}bg-rose-500{% endif %}"></span>
+                                {% if log.status %}Success{% else %}Failed{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-10 text-slate-400 text-sm">No access logs found.</div>
+                    {% endfor %}
+                </div>
+
+                <!-- Desktop Table (Hidden on small screens) -->
+                <div
+                    class="hidden lg:block glass-card rounded-[3.5rem] overflow-hidden border border-white/20 shadow-2xl relative max-h-[calc(100vh-200px)] overflow-y-auto custom-scroll">
+                    <div
+                        class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-500/50 to-transparent opacity-50">
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-separate border-spacing-0">
+                            <thead>
+                                <tr class="bg-slate-50/50 dark:bg-white/5">
+                                    <th
+                                        class="px-8 py-5 text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 dark:border-white/5 whitespace-nowrap">
+                                        Ref ID</th>
+                                    <th
+                                        class="px-8 py-5 text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 dark:border-white/5 whitespace-nowrap">
+                                        Identity Node</th>
+                                    <th
+                                        class="px-8 py-5 text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 dark:border-white/5 whitespace-nowrap">
+                                        Action</th>
+                                    <th
+                                        class="px-8 py-5 text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 dark:border-white/5 whitespace-nowrap">
+                                        Network (IP)</th>
+                                    <th
+                                        class="px-8 py-5 text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 dark:border-white/5 whitespace-nowrap">
+                                        Timestamp</th>
+                                    <th
+                                        class="px-8 py-5 text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.3em] border-b border-slate-100 dark:border-white/5 whitespace-nowrap">
+                                        Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logTableBody" class="divide-y divide-slate-100 dark:divide-white/5">
+                                {% for log in logs %}
+                                <tr class="hover:bg-brand-500/[0.02] transition-all group lg-row cursor-default"
+                                    data-action="{{ log.action }}">
+                                    <td
+                                        class="px-8 py-6 font-mono text-[10px] text-slate-400 tracking-tighter border-b border-slate-100 dark:border-white/5 group-hover:border-transparent transition-colors">
+                                        #{{ forloop.counter }}
+                                    </td>
+                                    <td
+                                        class="px-8 py-6 border-b border-slate-100 dark:border-white/5 group-hover:border-transparent transition-colors">
+                                        <div class="flex items-center gap-3">
+                                            <div
+                                                class="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-white/5 dark:to-white/10 flex items-center justify-center font-black text-[10px] text-slate-600 dark:text-slate-400 group-hover:border-brand-500/50 border border-transparent transition-all shadow-sm group-hover:shadow-brand-500/10">
+                                                {{ log.user_prefix }}
+                                            </div>
+                                            <div>
+                                                <p
+                                                    class="text-sm font-bold text-slate-700 dark:text-white leading-none group-hover:text-brand-500 transition-colors">
+                                                    {{ log.username }}</p>
+                                                <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">
+                                                    Authorized Node
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td
+                                        class="px-8 py-6 border-b border-slate-100 dark:border-white/5 group-hover:border-transparent transition-colors">
+                                        {% if log.action == 'login' %}
+                                        <span
+                                            class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                            <i class="fa-solid fa-right-to-bracket text-[10px]"></i>
+                                            <span class="text-[9px] font-black uppercase tracking-wider">Login</span>
+                                        </span>
+                                        {% elif log.action == 'logout' %}
+                                        <span
+                                            class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-500/10 text-slate-500 border border-slate-500/20">
+                                            <i class="fa-solid fa-right-from-bracket text-[10px]"></i>
+                                            <span class="text-[9px] font-black uppercase tracking-wider">Logout</span>
+                                        </span>
+                                        {% else %}
+                                        <span class="text-[9px] font-bold text-slate-500 uppercase">{{ log.action
+                                            }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td
+                                        class="px-8 py-6 font-mono text-[10px] text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-white/5 group-hover:border-transparent transition-colors">
+                                        <span
+                                            class="px-2 py-1 rounded-md bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 group-hover:border-brand-500/20 transition-colors">
+                                            {{ log.ip }}</span>
+                                    </td>
+                                    <td
+                                        class="px-8 py-6 border-b border-slate-100 dark:border-white/5 group-hover:border-transparent transition-colors">
+                                        <div class="flex flex-col">
+                                            <p
+                                                class="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase">
+                                                {{ log.date }}</p>
+                                            <p
+                                                class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">
+                                                {{ log.time }}
+                                            </p>
+                                        </div>
+                                    </td>
+                                    <td
+                                        class="px-8 py-6 border-b border-slate-100 dark:border-white/5 group-hover:border-transparent transition-colors">
+                                        <span
+                                            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full {% if log.status %}bg-emerald-500/10 text-emerald-500{% else %}bg-rose-500/10 text-rose-500{% endif %} text-[9px] font-black uppercase tracking-widest border border-current/10">
+                                            <span
+                                                class="w-1.5 h-1.5 rounded-full {% if log.status %}bg-emerald-500 animate-pulse{% else %}bg-rose-500{% endif %}"></span>
+                                            {% if log.status %}Success{% else %}Failed{% endif %}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="px-8 py-10 text-center text-slate-400 text-sm">No access
+                                        logs found.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Sidebar Toggle
+        const sidebar = document.getElementById('sidebar');
+        const openSidebarBtn = document.getElementById('open-sidebar');
+        const closeSidebarBtn = document.getElementById('close-sidebar');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        openSidebarBtn?.addEventListener('click', toggleSidebar);
+        closeSidebarBtn?.addEventListener('click', toggleSidebar);
+
+        // ESC key to close sidebar
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && !sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.add('-translate-x-full');
+            }
+        });
+
+        // Mobile Theme Toggle Logic
+        const themeToggleMobileBtn = document.getElementById('theme-toggle-mobile');
+
+        function updateMobileThemeIcon() {
+            const isDark = document.documentElement.classList.contains('dark');
+            // Re-render icon based on state
+            themeToggleMobileBtn.innerHTML = isDark
+                ? '<i class="fa-solid fa-sun text-lg text-amber-500"></i>'
+                : '<i class="fa-solid fa-moon text-lg text-brand-600"></i>';
+        }
+
+        // Initialize mobile icon
+        if (themeToggleMobileBtn) {
+            updateMobileThemeIcon();
+
+            themeToggleMobileBtn.addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+                const isDark = document.documentElement.classList.contains('dark');
+                localStorage.theme = isDark ? 'dark' : 'light';
+                updateMobileThemeIcon();
+            });
+        }
+
+        // Theme Toggle Logic
+        const themeToggleBtn = document.getElementById('theme-toggle');
+
+        function updateThemeIcon() {
+            const isDark = document.documentElement.classList.contains('dark');
+            // Re-render icon based on state
+            themeToggleBtn.innerHTML = isDark
+                ? '<i class="fa-solid fa-sun text-lg text-amber-500 md:text-xl"></i>'
+                : '<i class="fa-solid fa-moon text-lg text-brand-600 md:text-xl"></i>';
+        }
+
+        // Initialize icon
+        updateThemeIcon();
+
+        themeToggleBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            updateThemeIcon();
+        });
+
+        // Search & Filter Logic
+        const searchInput = document.getElementById('logSearch');
+        const actionFilter = document.getElementById('actionFilter');
+        const tableRows = document.querySelectorAll('#logTableBody .lg-row');
+        const mobileCards = document.querySelectorAll('#mobileLogContainer .mobile-log-card');
+
+        function filterLogs() {
+            const query = searchInput.value.toLowerCase();
+            const action = actionFilter.value.toLowerCase();
+
+            // Filter Desktop Rows
+            tableRows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                const rowAction = row.getAttribute('data-action')?.toLowerCase() || 'unknown';
+
+                const matchesSearch = text.includes(query);
+                const matchesAction = action === 'all' || rowAction === action;
+
+                row.style.display = (matchesSearch && matchesAction) ? '' : 'none';
+            });
+
+            // Filter Mobile Cards
+            mobileCards.forEach(card => {
+                const text = card.innerText.toLowerCase();
+                const cardAction = card.getAttribute('data-action')?.toLowerCase() || 'unknown';
+
+                const matchesSearch = text.includes(query);
+                const matchesAction = action === 'all' || cardAction === action;
+
+                card.style.display = (matchesSearch && matchesAction) ? '' : 'none';
+            });
+        }
+
+        searchInput.addEventListener('input', filterLogs);
+        actionFilter.addEventListener('change', filterLogs);
+
+        // Print functionality
+        function printLogs() {
+            // Get the filter values
+            const actionFilter = document.getElementById('actionFilter');
+            const searchInput = document.getElementById('logSearch');
+            const filterValue = actionFilter ? actionFilter.value : 'all';
+            const searchValue = searchInput ? searchInput.value.toLowerCase() : '';
+
+            // Get all logs data based on current filtered view
+            const logsData = [];
+            const logRows = document.querySelectorAll('#logTableBody .lg-row:not([style*="display: none"])'); // Only visible rows
+            const mobileCards = document.querySelectorAll('#mobileLogContainer .mobile-log-card:not([style*="display: none"])'); // Only visible cards
+
+            // Process desktop rows if available
+            if (logRows.length > 0) {
+                logRows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 6) {
+                        const logData = {
+                            id: cells[0].textContent.trim(),
+                            username: cells[1].querySelector('p')?.textContent.trim() || '',
+                            action: cells[2].textContent.trim(),
+                            ip: cells[3].textContent.trim(),
+                            date: cells[4].querySelector('p:first-child')?.textContent.trim() || '',
+                            time: cells[4].querySelector('p:last-child')?.textContent.trim() || '',
+                            status: cells[5].textContent.trim()
+                        };
+                        logsData.push(logData);
+                    }
+                });
+            }
+            // Fallback to mobile cards if desktop rows aren't available
+            else {
+                mobileCards.forEach(card => {
+                    const logData = {
+                        id: card.querySelector('.mobile-log-card span.text-slate-400')?.textContent.trim() || '',
+                        username: card.querySelector('h4')?.textContent.trim() || '',
+                        action: Array.from(card.querySelectorAll('p')).find(p => p.textContent.includes('Action'))?.nextElementSibling?.textContent.trim() || '',
+                        ip: Array.from(card.querySelectorAll('p')).find(p => p.textContent.includes('Network'))?.nextElementSibling?.textContent.trim() || '',
+                        date: card.querySelector('.flex.flex-col span:first-child')?.textContent.trim() || '',
+                        time: card.querySelector('.flex.flex-col span:last-child')?.textContent.trim() || '',
+                        status: card.querySelector('span.inline-flex span:last-child')?.textContent.trim() || ''
+                    };
+                    logsData.push(logData);
+                });
+            }
+
+            // Determine filter description
+            let filterDescription = "All Actions";
+            if (filterValue !== 'all') {
+                filterDescription = filterValue.charAt(0).toUpperCase() + filterValue.slice(1) + " Events";
+            }
+            if (searchValue) {
+                filterDescription += ` (Search: "${searchValue}")`;
+            }
+
+            // Create a temporary print div
+            const printDiv = document.createElement('div');
+            printDiv.id = 'print-content';
+            printDiv.style.position = 'absolute';
+            printDiv.style.left = '-9999px';
+            printDiv.style.top = '-9999px';
+            printDiv.style.width = '210mm'; // A4 width
+            printDiv.style.minHeight = '297mm'; // A4 height
+            printDiv.style.padding = '20px';
+            printDiv.style.fontFamily = 'Arial, sans-serif';
+            printDiv.style.fontSize = '12px';
+            printDiv.style.backgroundColor = 'white';
+            printDiv.style.color = 'black';
+
+            printDiv.innerHTML = `
+                <div class="header">
+                    <h1 style="margin: 0; color: #333; text-align: center;">Access Logs Report</h1>
+                    <div style="color: #666; font-size: 14px; margin-top: 5px; text-align: center;">
+                        Filter Applied: ${filterDescription}
+                    </div>
+                    <div style="color: #666; font-size: 14px; margin-top: 5px; text-align: center;">
+                        Generated on: ${new Date().toLocaleString()}
+                    </div>
+                    <hr style="border: 0; border-top: 2px solid #ccc; margin: 15px 0;" />
+                </div>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                    <thead>
+                        <tr style="background-color: #f2f2f2;">
+                            <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Ref ID</th>
+                            <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Identity Node</th>
+                            <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Action</th>
+                            <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Network (IP)</th>
+                            <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Date</th>
+                            <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Time</th>
+                            <th style="border: 1px solid #ccc; padding: 8px; text-align: left;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${logsData.map(log => `
+                            <tr style="${logsData.indexOf(log) % 2 === 0 ? 'background-color: #f9f9f9;' : ''}">
+                                <td style="border: 1px solid #ccc; padding: 8px;">${log.id}</td>
+                                <td style="border: 1px solid #ccc; padding: 8px;">${log.username}</td>
+                                <td style="border: 1px solid #ccc; padding: 8px;">${log.action}</td>
+                                <td style="border: 1px solid #ccc; padding: 8px;">${log.ip}</td>
+                                <td style="border: 1px solid #ccc; padding: 8px;">${log.date}</td>
+                                <td style="border: 1px solid #ccc; padding: 8px;">${log.time}</td>
+                                <td style="border: 1px solid #ccc; padding: 8px;">${log.status}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #666;">
+                    Total Records: ${logsData.length} | Generated by Eduke System
+                </div>
+            `;
+
+            document.body.appendChild(printDiv);
+
+            // Show the print dialog
+            window.print();
+
+            // Remove the temporary div after printing
+            document.body.removeChild(printDiv);
+        }
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-active, .active, a[class*="bg-brand-500/10"][class*="text-white"], a[class*="bg-accent-fuchsia/10"][class*="text-white"], a[class*="bg-indigo-500/10"][class*="text-white"], a[class*="bg-emerald-500/10"][class*="text-white"]');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+
+</html>

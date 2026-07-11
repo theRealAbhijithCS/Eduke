@@ -1,0 +1,637 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduke | Performance Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa',
+                            500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95',
+                        },
+                        accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b', emerald: '#10b981' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            overflow: hidden;
+        }
+
+        .dark body {
+            background-color: #020617;
+        }
+
+        #spotlight {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.12) 0%, transparent 35%);
+            z-index: 1;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-sidebar {
+            background: #0a0a14;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #8b5cf633;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+    <div id="spotlight"></div>
+
+    <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 h-[100dvh] lg:h-full">
+            <div class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden">
+                
+                <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+                    <div class="flex items-center gap-3 group cursor-pointer">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 dark:border-white/10 bg-white/10 dark:bg-white/5 group-hover:rotate-12 transition-transform animate-pulse bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 bg-[length:200%_200%]">
+                            <img src="{% static 'main/images/logobase_white.png' %}" class="w-6 h-6 object-contain">
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span class="text-accent-fuchsia">.</span></h2>
+                            <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Command</p>
+                        </div>
+                    </div>
+                    <button id="close-sidebar" class="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white transition-all">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <nav class="flex-grow px-4 space-y-4 overflow-y-auto custom-scroll py-2">
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Navigation</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'class_head_dashboard' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_dashboard' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %}">
+                                {% if request.resolver_match.url_name == 'class_head_dashboard' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-layer-group {% if request.resolver_match.url_name == 'class_head_dashboard' %}text-brand-400{% else %}group-hover:text-brand-400{% endif %}"></i>
+                                <span class="font-bold text-sm">Dashboard</span>
+                            </a>
+                            <a href="{% url 'class_head_class' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_class' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %} group">
+                                {% if request.resolver_match.url_name == 'class_head_class' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-chalkboard {% if request.resolver_match.url_name == 'class_head_class' %}text-brand-400{% else %}group-hover:text-brand-400{% endif %} transition-colors"></i>
+                                <span class="font-bold text-sm">Your Class</span>
+                            </a>
+                            <a href="{% url 'class_head_students' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_students' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %} group">
+                                {% if request.resolver_match.url_name == 'class_head_students' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-user-group {% if request.resolver_match.url_name == 'class_head_students' %}text-accent-fuchsia{% else %}group-hover:text-accent-fuchsia{% endif %} transition-colors"></i>
+                                <span class="font-bold text-sm">Students</span>
+                            </a>
+                            <a href="{% url 'class_head_reports' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_reports' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %} group">
+                                {% if request.resolver_match.url_name == 'class_head_reports' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-chart-bar {% if request.resolver_match.url_name == 'class_head_reports' %}text-emerald-400{% else %}group-hover:text-emerald-400{% endif %} transition-colors"></i>
+                                <span class="font-bold text-sm">Reports</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Communication</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'class_head_chat' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_chat' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %} group">
+                                {% if request.resolver_match.url_name == 'class_head_chat' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-comments {% if request.resolver_match.url_name == 'class_head_chat' %}text-indigo-400{% else %}group-hover:text-indigo-400{% endif %} transition-colors"></i>
+                                <span class="font-bold text-sm">Eduke Chat</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">User</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'class_head_profile' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_profile' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %} group">
+                                {% if request.resolver_match.url_name == 'class_head_profile' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-circle-user text-base {% if request.resolver_match.url_name == 'class_head_profile' %}text-brand-400{% else %}group-hover:text-brand-400{% endif %}"></i>
+                                <span class="font-bold text-sm">Profile </span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+
+                <div class="p-4 shrink-0 mt-auto mb-2 lg:mb-4">
+                    <div class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3 transition-all hover:border-white/20">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 font-black text-white text-xs">
+                                {{ class_details.2|slice:":1" }}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="text-[11px] font-black text-white truncate uppercase">{{ class_details.2 }}</h4>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none">Class Head</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'logout' %}" class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 transition-all duration-300">
+                            <span class="text-[9px] font-black uppercase tracking-widest group-hover/btn:text-white">Logout</span>
+                            <i class="fa-solid fa-power-off text-[10px] group-hover/btn:text-white transition-colors"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <header class="h-20 flex items-center justify-between px-8 shrink-0">
+                <div class="flex items-center gap-4">
+                    <button id="hamburger-button"
+                        class="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl glass-card text-brand-600">
+                        <i class="fa-solid fa-bars-staggered"></i>
+                    </button>
+                    <h1 class="text-xl font-black dark:text-white uppercase tracking-tight">Performance <span
+                            class="text-brand-500">Analytics</span></h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    {% include 'class_head/_notification_bell.html' %}
+                    <button id="theme-switch" class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center text-brand-600 dark:text-amber-400 hover:scale-110 transition-transform shadow-lg">
+                        <i id="theme-icon" class="fa-solid fa-moon"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div id="content-wrapper" class="flex-1 overflow-y-auto px-4 lg:px-8 pb-10 space-y-6 custom-scroll">
+
+                <div
+                    class="glass-card relative group p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-8 overflow-hidden border border-slate-200/50 dark:border-white/5 bg-white/70 dark:bg-slate-900/40 backdrop-blur-2xl shadow-2xl transition-all duration-500 hover:shadow-brand-500/10">
+
+                    <div
+                        class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-500/40 to-transparent">
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-center gap-8 relative z-10 w-full md:w-auto">
+                        <div class="relative">
+                            <div
+                                class="absolute inset-0 bg-brand-500 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity">
+                            </div>
+                            <div
+                                class="w-24 h-24 rounded-[2.2rem] bg-gradient-to-br from-brand-500 to-indigo-700 flex items-center justify-center text-4xl font-black text-white shadow-[0_20px_50px_rgba(79,70,229,0.3)] relative z-10 border border-white/20">
+                                {{ student.name|slice:":1" }}
+                            </div>
+                            <div
+                                class="absolute -inset-2 border-2 border-brand-500/20 rounded-[2.5rem] animate-[spin_10s_linear_infinite]">
+                            </div>
+                        </div>
+
+                        <div class="text-center sm:text-left">
+                            <div class="flex items-center justify-center sm:justify-start gap-3 mb-2">
+                                <span
+                                    class="px-2 py-0.5 rounded bg-brand-500/10 text-brand-500 text-[9px] font-black uppercase tracking-widest border border-brand-500/20">
+                                    System Verified
+                                </span>
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            </div>
+
+                            <h2
+                                class="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none mb-2">
+                                {{ student.name }}
+                            </h2>
+
+                            <div class="flex flex-wrap justify-center sm:justify-start items-center gap-x-4 gap-y-1">
+                                <p class="text-xs font-bold text-slate-400 lowercase flex items-center gap-1.5">
+                                    <i class="fa-solid fa-at text-brand-500/50"></i> {{ student.email }}
+                                </p>
+                                <div class="hidden sm:block w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+                                <p
+                                    class="text-xs font-black text-brand-600 dark:text-brand-400 uppercase tracking-widest">
+                                    ID: <span class="font-mono">{{ student.roll_no }}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative z-10 w-full md:w-72">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 ml-2">
+                            Intelligence Protocol
+                        </label>
+                        <form method="GET" class="relative group/select">
+                            <div
+                                class="absolute left-5 top-1/2 -translate-y-1/2 text-brand-500 pointer-events-none group-hover/select:scale-110 transition-transform">
+                                <i class="fa-solid fa-layer-group text-sm"></i>
+                            </div>
+
+                            <select name="subject_id" id="subject-select" onchange="this.form.submit()"
+                                class="w-full pl-12 pr-10 py-4 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 dark:text-white rounded-2xl text-[11px] font-black uppercase tracking-widest focus:outline-none focus:ring-4 focus:ring-brand-500/20 appearance-none cursor-pointer transition-all hover:bg-slate-200 dark:hover:bg-white/10">
+                                <option value="" selected hidden>Initialize Subject Data</option>
+                                {% for subject in subjects %}
+                                <option class="dark:text-white dark:bg-slate-900" value="{{ subject.id }}" {% if subject.id == selected_subject_id %}selected{% endif %}>
+                                    {{ subject.name|upper }}
+                                </option>
+                                {% endfor %}
+                            </select>
+
+                            <div class="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                            </div>
+                        </form>
+                    </div>
+
+                    <i
+                        class="fa-solid fa-graduation-cap absolute -right-4 -bottom-6 text-[10rem] opacity-[0.03] dark:opacity-[0.07] -rotate-12 group-hover:rotate-0 transition-transform duration-1000"></i>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+
+                    <div
+                        class="group relative stat-card glass-card p-8 rounded-[3rem] bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-200/50 dark:border-white/5 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-brand-500/20 overflow-hidden">
+                        <div
+                            class="absolute top-0 right-0 w-24 h-24 bg-brand-500/10 blur-3xl -mr-10 -mt-10 group-hover:bg-brand-500/20 transition-colors">
+                        </div>
+
+                        <div class="relative z-10">
+                            <div class="flex items-center justify-between mb-6">
+                                <div
+                                    class="w-14 h-14 rounded-2xl bg-brand-500 text-white flex items-center justify-center text-xl shadow-lg shadow-brand-500/30 group-hover:rotate-12 transition-transform">
+                                    <i class="fa-solid fa-chart-line"></i>
+                                </div>
+                                <span
+                                    class="text-[9px] font-black text-brand-500 bg-brand-500/10 px-3 py-1 rounded-full uppercase tracking-tighter">Performance
+                                    Index</span>
+                            </div>
+
+                            <h3 class="text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
+                                Marks Integrity</h3>
+
+                            <div class="flex items-end gap-2">
+                                <p class="text-5xl font-black text-slate-900 dark:text-white tracking-tighter">
+                                    {% if evaluations.marks_percentage %}{{ evaluations.marks_percentage }}<span
+                                        class="text-2xl text-brand-500">%</span>{% else %}--{% endif %}
+                                </p>
+                            </div>
+
+                            <div class="mt-6 h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                <div class="h-full bg-brand-500 rounded-full transition-all duration-1000 shadow-[0_0_12px_rgba(99,102,241,0.6)]"
+                                    style="width: {{ evaluations.marks_percentage|default:0 }}%"></div>
+                            </div>
+                        </div>
+                        <div
+                            class="absolute bottom-0 left-0 h-1.5 w-full bg-brand-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500">
+                        </div>
+                    </div>
+
+                    <div
+                        class="group relative stat-card glass-card p-8 rounded-[3rem] bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-200/50 dark:border-white/5 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-blue-500/20 overflow-hidden">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 blur-3xl -mr-10 -mt-10"></div>
+
+                        <div class="relative z-10">
+                            <div class="flex items-center justify-between mb-6">
+                                <div
+                                    class="w-14 h-14 rounded-2xl bg-blue-500 text-white flex items-center justify-center text-xl shadow-lg shadow-blue-500/30 group-hover:rotate-12 transition-transform">
+                                    <i class="fa-solid fa-calendar-check"></i>
+                                </div>
+                                <span
+                                    class="text-[9px] font-black text-blue-500 bg-blue-500/10 px-3 py-1 rounded-full uppercase tracking-tighter">Presence
+                                    Log</span>
+                            </div>
+
+                            <h3 class="text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
+                                Attendance Ratio</h3>
+
+                            <div class="flex items-end gap-2">
+                                <p class="text-5xl font-black text-slate-900 dark:text-white tracking-tighter">
+                                    {% if evaluations.attendance_percentage %}{{evaluations.attendance_percentage}}<span
+                                        class="text-2xl text-blue-500">%</span>{% else %}--{% endif %}
+                                </p>
+                            </div>
+
+                            <div class="mt-6 h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                <div class="h-full bg-blue-500 rounded-full transition-all duration-1000 shadow-[0_0_12px_rgba(59,130,246,0.6)]"
+                                    style="width: {{ evaluations.attendance_percentage|default:0 }}%"></div>
+                            </div>
+                        </div>
+                        <div
+                            class="absolute bottom-0 left-0 h-1.5 w-full bg-blue-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500">
+                        </div>
+                    </div>
+
+                    <div
+                        class="group relative stat-card glass-card p-8 rounded-[3rem] bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-200/50 dark:border-white/5 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-emerald-500/20 overflow-hidden">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 blur-3xl -mr-10 -mt-10"></div>
+
+                        <div class="relative z-10">
+                            <div class="flex items-center justify-between mb-6">
+                                <div
+                                    class="w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-xl shadow-lg shadow-emerald-500/30 group-hover:rotate-12 transition-transform">
+                                    <i class="fa-solid fa-bolt"></i>
+                                </div>
+                                <span
+                                    class="text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full uppercase tracking-tighter">Response
+                                    Speed</span>
+                            </div>
+
+                            <h3 class="text-left text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
+                                Quiz Efficiency</h3>
+
+                            <div class="flex items-end gap-2">
+                                <p class="text-5xl font-black text-slate-900 dark:text-white tracking-tighter">
+                                    {% if quiz_percentage %}{{ quiz_percentage }}<span
+                                        class="text-2xl text-emerald-500">%</span>{% else %}--{% endif %}
+                                </p>
+                            </div>
+
+                            <div class="mt-6 h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                <div class="h-full bg-emerald-500 rounded-full transition-all duration-1000 shadow-[0_0_12px_rgba(16,185,129,0.6)]"
+                                    style="width: {{ quiz_percentage|default:0 }}%"></div>
+                            </div>
+                        </div>
+                        <div
+                            class="absolute bottom-0 left-0 h-1.5 w-full bg-emerald-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {% for label, val in evaluations.items %}
+                    {% if "rating" in label %}
+                    <div
+                        class="group relative glass-card p-5 rounded-[2rem] border border-slate-200/50 dark:border-white/5 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md transition-all duration-300 hover:shadow-lg hover:shadow-brand-500/10">
+
+                        <div class="flex justify-between items-start mb-4">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">
+                                {{ label|cut:"_rating"|default:"--" }}
+                            </p>
+                            <div class="flex gap-1">
+                                <span
+                                    class="w-1 h-1 rounded-full {% if val >= 8 %}bg-emerald-500{% elif val >= 5 %}bg-amber-500{% else %}bg-rose-500{% endif %}"></span>
+                                <span
+                                    class="w-1 h-1 rounded-full {% if val >= 8 %}bg-emerald-500/40{% elif val >= 5 %}bg-amber-500/40{% else %}bg-rose-500/40{% endif %}"></span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-baseline gap-1 mb-3">
+                            <span
+                                class="text-3xl font-black tracking-tighter text-slate-800 dark:text-white group-hover:text-brand-500 transition-colors">
+                                {{ val|default:"0" }}
+                            </span>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">/ 100</span>
+                        </div>
+
+                        <div
+                            class="relative h-2 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden flex gap-0.5">
+                            {% with score=val|default:0 %}
+                            <div class="h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(var(--brand-rgb),0.4)]
+                                {% if score >= 8 %}bg-emerald-500 shadow-emerald-500/40
+                                {% elif score >= 5 %}bg-brand-500 shadow-brand-500/40
+                                {% else %}bg-rose-500 shadow-rose-500/40{% endif %}" style="width: {{ score }}%">
+                            </div>
+                            {% endwith %}
+                        </div>
+
+                        <div class="mt-3 flex justify-between items-center">
+                            <span class="text-[8px] font-black text-slate-400 uppercase">Efficiency Protocol</span>
+                            <i class="fa-solid fa-microchip text-[10px] text-slate-300 dark:text-slate-700"></i>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <div
+                        class="xl:col-span-2 group relative glass-card rounded-[2.5rem] p-8 border border-slate-200/50 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl shadow-2xl overflow-hidden">
+
+                        <div class="flex items-center justify-between mb-8 relative z-10">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center text-brand-500 border border-brand-500/20">
+                                    <i class="fa-solid fa-wave-square animate-pulse"></i>
+                                </div>
+                                <div>
+                                    <h3
+                                        class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-[0.2em] leading-none">
+                                        Performance Curve
+                                    </h3>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                        Real-time Data Analytics</p>
+                                </div>
+                            </div>
+
+                            <div class="hidden sm:flex items-center gap-3">
+                                <div
+                                    class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                                    <span
+                                        class="text-[9px] font-black text-emerald-600 uppercase tracking-tighter">Stability:
+                                        Optimal</span>
+                                </div>
+                                <div
+                                    class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[9px] font-black text-slate-500 uppercase">
+                                    2026 Protocol
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="h-80 w-full relative">
+                            <div class="absolute inset-0 opacity-[0.03] dark:opacity-[0.07] pointer-events-none"
+                                style="background-image: radial-gradient(#4f46e5 1px, transparent 1px); background-size: 20px 20px;">
+                            </div>
+
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+
+                        <i
+                            class="fa-solid fa-chart-area absolute -right-6 -bottom-6 text-9xl opacity-[0.02] dark:opacity-[0.05] -rotate-12 group-hover:rotate-0 transition-transform duration-1000"></i>
+                    </div>
+
+                    <div class="group relative glass-card rounded-[2.5rem] p-8 flex flex-col justify-between overflow-hidden border border-slate-200/50 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl transition-all duration-500 hover:shadow-2xl hover:shadow-brand-500/10">
+    
+    <div id="scanner-line" class="hidden absolute inset-0 w-full h-1/2 bg-gradient-to-b from-brand-500/20 to-transparent border-t-2 border-brand-500 z-0 animate-scan"></div>
+
+    <div class="relative z-10">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
+                    <i class="fa-solid fa-microchip animate-pulse"></i>
+                </div>
+                <div>
+                    <h3 class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-[0.2em]">Predictive AI</h3>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        <span class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Engine: V.2.6-Beta</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <p class="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed mb-8 bg-slate-100/50 dark:bg-white/5 p-4 rounded-2xl border border-slate-200/50 dark:border-white/5">
+            Analyzing <span class="text-brand-600 dark:text-brand-400 font-bold">recursive behavioral vectors</span> and academic velocity to simulate final outcome protocols.
+        </p>
+
+        <div id="prediction-result" class="hidden transform transition-all duration-700">
+            <div class="relative p-6 rounded-[2rem] bg-slate-900 dark:bg-brand-600 text-white shadow-2xl overflow-hidden group/result">
+                <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+                
+                <div class="relative z-10">
+                    <div class="flex justify-between items-start mb-4">
+                        <p class="text-[9px] font-black uppercase tracking-[0.2em] text-brand-200">Forecasted Outcome</p>
+                        <i class="fa-solid fa-shield-check text-brand-300"></i>
+                    </div>
+                    
+                    <div class="flex items-baseline gap-2">
+                        <p class="text-5xl font-black tracking-tighter" id="predicted-marks">--</p>
+                        <span class="text-xl font-bold opacity-60">%</span>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-white/10 flex justify-between items-center">
+                        <span class="text-[8px] font-black uppercase tracking-widest text-brand-100 italic">Accuracy: High Probability</span>
+                        <div class="flex gap-1">
+                            <div class="w-1 h-3 bg-brand-400/50 rounded-full"></div>
+                            <div class="w-1 h-3 bg-brand-200 rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button id="predict-btn" class="relative z-10 w-full mt-6 py-5 bg-slate-900 dark:bg-brand-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-xl hover:shadow-brand-500/40 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-3">
+        <span id="btn-text">Run Analysis</span>
+        <i class="fa-solid fa-terminal text-[10px] opacity-50"></i>
+    </button>
+</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+    <script>
+        // Spotlight Effect
+        document.addEventListener('mousemove', e => {
+            const spotlight = document.getElementById('spotlight');
+            spotlight.style.setProperty('--x', `${e.clientX}px`);
+            spotlight.style.setProperty('--y', `${e.clientY}px`);
+        });
+
+        // Theme Toggle
+        const themeBtn = document.getElementById('theme-switch');
+        const themeIcon = document.getElementById('theme-icon');
+        themeBtn.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            themeIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            if (chartInstance) updateChartTheme(isDark);
+        });
+
+        // Sidebar Toggle
+        document.getElementById('hamburger-button').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+        });
+
+        // Chart Logic
+        let chartInstance = null;
+        function updateChart(data) {
+            const ctx = document.getElementById("performanceChart").getContext("2d");
+            if (chartInstance) chartInstance.destroy();
+
+            const isDark = document.documentElement.classList.contains('dark');
+
+            chartInstance = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: ["Marks", "Attendance", "Study", "Sleep", "Particip.", "Activity", "Quizzes"],
+                    datasets: [{
+                        label: "Efficiency %",
+                        data: data,
+                        backgroundColor: "#8b5cf690",
+                        hoverBackgroundColor: "#8b5cf6",
+                        borderRadius: 12,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { weight: 'bold', size: 10 }, color: isDark ? '#94a3b8' : '#64748b' } },
+                        y: { beginAtZero: true, max: 100, grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }, ticks: { color: isDark ? '#94a3b8' : '#64748b' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // Prediction Logic
+        document.getElementById("predict-btn").addEventListener("click", function () {
+            let subId = document.getElementById("subject-select").value;
+            if (!subId) return alert("Select Subject Protocol First");
+
+            this.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> Analyzing...';
+
+            fetch(window.location.pathname + `?subject_id=${subId}`, {
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById("predicted-marks").textContent = (data.predicted_marks || "N/A") + "%";
+                    document.getElementById("prediction-result").classList.remove("hidden");
+                    this.classList.add("hidden");
+                })
+                .catch(err => console.error(err));
+        });
+
+
+
+        // Initialize
+        document.addEventListener("DOMContentLoaded", () => {
+            const graphData = JSON.parse("{{ graph_data|escapejs }}") || [0, 0, 0, 0, 0, 0, 0];
+            updateChart(graphData);
+        });
+    </script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,710 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eduke | Performance Analytics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+  <script>
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+            accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b', emerald: '#10b981' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+    html,
+    body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      position: fixed;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      letter-spacing: -0.01em;
+      background-color: #f8fafc;
+    }
+
+    .dark body {
+      background-color: #020617;
+    }
+
+    #spotlight {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.12) 0%, transparent 40%);
+      z-index: 1;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    .dark .glass-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .glass-sidebar {
+      background: rgba(10, 10, 20, 0.95);
+      backdrop-filter: blur(30px);
+      border-right: 1px solid rgba(139, 92, 246, 0.1);
+    }
+
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #8b5cf633;
+      border-radius: 10px;
+    }
+
+    /* PRINT FIXES */
+    @media print {
+      /* Hide the entire dashboard container */
+      .no-print, #sidebar, main, header, .relative.z-10.flex.h-screen {
+        display: none !important;
+      }
+
+      /* Reset the body and html to allow normal flow */
+      html, body {
+        overflow: visible !important;
+        position: static !important;
+        height: auto !important;
+        width: auto !important;
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .print-only {
+        display: block !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 20px !important; /* Some padding for PDF margins */
+      }
+
+      table {
+        border-collapse: collapse !important;
+        width: 100% !important;
+      }
+
+      th, td {
+        border: 1px solid #999 !important; /* Darker border for print */
+        color: black !important;
+      }
+      
+      h1, h2, p {
+        color: black !important;
+      }
+
+      /* Force background colors to print */
+      .bg-gray-100 { background-color: #f3f4f6 !important; -webkit-print-color-adjust: exact; }
+      .bg-gray-50 { background-color: #f9fafb !important; -webkit-print-color-adjust: exact; }
+    }
+
+    .print-only {
+      display: none;
+    }
+
+    .nav-item-link.active {
+      background: rgba(139, 92, 246, 0.15) !important;
+      border-color: rgba(139, 92, 246, 0.2) !important;
+      color: white !important;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+
+<body class="antialiased">
+  <div id="spotlight" class="no-print"></div>
+
+  <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden no-print">
+
+   <aside id="sidebar"
+
+      class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-[100dvh] lg:h-full">
+
+
+
+      <div
+
+        class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5 bg-[#0a0a14]/80 backdrop-blur-xl">
+
+
+
+        <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+
+          <div class="flex items-center gap-3 group cursor-pointer">
+
+            <div
+
+              class="w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 dark:border-white/10 bg-white/10 dark:bg-white/5 group-hover:rotate-12 transition-transform animate-pulse bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 bg-[length:200%_200%]">
+
+              <img src="{% static 'main/images/logobase_white.png' %}" alt="Eduke Logo"
+
+                class="w-6 h-6 object-contain animate-color-cycle">
+
+            </div>
+
+            <div>
+
+              <h2 class="text-xl font-black tracking-tighter text-white uppercase text-nowrap">
+
+                Eduke<span class="text-accent-fuchsia">.</span>
+
+              </h2>
+
+              <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Portal</p>
+
+            </div>
+
+          </div>
+
+
+
+          <button id="close-sidebar"
+
+            class="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white transition-all">
+
+            <i class="fa-solid fa-xmark text-xl"></i>
+
+          </button>
+
+        </div>
+
+
+
+        <nav class="flex-grow px-4 space-y-4 overflow-y-auto no-scrollbar py-2">
+
+
+
+          <div>
+
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Command</p>
+
+            <div class="space-y-1">
+
+
+
+              <a href="{% url 'admin_dashboard' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+
+                {% if request.resolver_match.url_name == 'admin_dashboard' %}
+
+                    active bg-brand-500/10 border border-brand-500/20 text-white
+
+                {% else %}
+
+                    text-slate-400 hover:text-white hover:bg-white/5 border border-transparent
+
+                {% endif %}">
+
+
+
+
+
+                <i
+
+                  class="fa-solid fa-layer-group text-base {% if request.resolver_match.url_name == 'admin_dashboard' %} text-brand-400 {% else %} group-hover:text-brand-400 {% endif %}"></i>
+
+                <span class="font-bold text-sm">Dashboard</span>
+
+              </a>
+
+
+
+              <a href="{% url 'admin_students' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+
+                        {% if request.resolver_match.url_name == 'admin_students' or request.resolver_match.url_name == 'admin_student_performance' %}
+
+                            bg-accent-fuchsia/10 border border-accent-fuchsia/20 text-white
+
+                        {% else %}
+
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent
+
+                        {% endif %}">
+
+
+
+                {% if request.resolver_match.url_name == 'admin_students' or request.resolver_match.url_name == 'admin_student_performance' %}
+
+                <span class="absolute left-2 w-1 h-4 bg-accent-fuchsia rounded-full shadow-[0_0_10px_#d946ef]"></span>
+
+                {% endif %}
+
+
+
+                <i
+
+                  class="fa-solid fa-user-shield text-base {% if request.resolver_match.url_name == 'admin_students' or request.resolver_match.url_name == 'admin_student_performance' %} text-brand-400 {% else %} group-hover:text-brand-400 {% endif %}"></i>
+
+                <span class="font-bold text-sm">Students</span>
+
+              </a>
+
+            </div>
+
+          </div>
+
+
+
+          <div>
+
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Operations
+
+            </p>
+
+            <div class="space-y-1">
+
+
+
+              <a href="{% url 'admin_classes' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+
+                        {% if request.resolver_match.url_name == 'admin_classes' %}
+
+                            bg-indigo-500/10 border border-indigo-500/20 text-white
+
+                        {% else %}
+
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent
+
+                        {% endif %}">
+
+
+
+                {% if request.resolver_match.url_name == 'admin_classes' %}
+
+                <span class="absolute left-2 w-1 h-4 bg-indigo-500 rounded-full shadow-[0_0_10px_#6366f1]"></span>
+
+                {% endif %}
+
+
+
+                <i
+
+                  class="fa-solid fa-chalkboard-user text-base {% if request.resolver_match.url_name == 'admin_classes' %} text-indigo-400 {% else %} group-hover:text-indigo-400 {% endif %}"></i>
+
+                <span class="font-bold text-sm">Manage Classes</span>
+
+              </a>
+
+
+
+              <a href="{% url 'admin_subjects' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+
+                        {% if request.resolver_match.url_name == 'admin_subjects' %}
+
+                            bg-emerald-500/10 border border-emerald-500/20 text-white
+
+                        {% else %}
+
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent
+
+                        {% endif %}">
+
+
+
+                {% if request.resolver_match.url_name == 'admin_subjects' %}
+
+                <span class="absolute left-2 w-1 h-4 bg-emerald-500 rounded-full shadow-[0_0_10px_#10b981]"></span>
+
+                {% endif %}
+
+
+
+                <i
+
+                  class="fa-solid fa-book-open-reader text-base {% if request.resolver_match.url_name == 'admin_subjects' %} text-emerald-400 {% else %} group-hover:text-emerald-400 {% endif %}"></i>
+
+                <span class="font-bold text-sm">Subject Head</span>
+
+              </a>
+
+
+
+                <a href="{% url 'admin_reports' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+
+    {% if request.resolver_match.url_name == 'admin_reports' %}
+
+        bg-indigo-500/10 border border-indigo-500/20 text-white
+
+    {% else %}
+
+        text-slate-400 hover:text-white hover:bg-white/5 border border-transparent
+
+    {% endif %}">
+
+
+
+    {% if request.resolver_match.url_name == 'admin_reports' %}
+
+    <span class="absolute left-2 w-1 h-4 bg-indigo-500 rounded-full shadow-[0_0_10px_#6366f1]"></span>
+
+    {% endif %}
+
+
+
+    <i class="fa-solid fa-chart-pie text-base
+
+        {% if request.resolver_match.url_name == 'admin_reports' %} text-indigo-400 {% else %} group-hover:text-indigo-400 {% endif %}"></i>
+
+   
+
+    <span class="font-bold text-sm">Reports Hub</span>
+
+</a>
+
+
+
+
+
+            </div>
+
+          </div>
+
+
+
+         
+
+
+
+          <div class="pt-2">
+
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">User</p>
+
+            <div class="space-y-1">
+
+              <a href="{% url 'admin_profile' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+
+                        {% if request.resolver_match.url_name == 'admin_profile' %}
+
+                            bg-brand-500/10 border border-brand-500/20 text-white
+
+                        {% else %}
+
+                            text-slate-400 hover:text-white hover:bg-white/5 border border-transparent
+
+                        {% endif %}">
+
+
+
+                {% if request.resolver_match.url_name == 'admin_profile' %}
+
+                <span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>
+
+                {% endif %}
+
+
+
+                <i
+
+                  class="fa-solid fa-circle-user text-base {% if request.resolver_match.url_name == 'admin_profile' %} text-brand-400 {% else %} group-hover:text-brand-400 {% endif %}"></i>
+
+                <span class="font-bold text-sm">{{ institution.institution_abbreviation|default:"User" }}
+
+                  Profile</span>
+
+              </a>
+
+            </div>
+
+          </div>
+
+        </nav>
+
+
+
+        <div class="p-4 shrink-0 mt-auto lg:mb-0">
+
+          <div
+
+            class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3 transition-all hover:border-white/20">
+
+            <div class="flex items-center gap-3">
+
+              <div class="relative flex-shrink-0">
+
+                <div
+
+                  class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 shadow-lg">
+
+                  <span class="text-[11px] font-black text-white uppercase">
+
+                    {{ institution.institution_abbreviation|default:"EDU" }}
+
+                  </span>
+
+                </div>
+
+                <div
+
+                  class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-[#0a0a14] rounded-full">
+
+                </div>
+
+              </div>
+
+              <div class="min-w-0 flex-1">
+
+                <h4 class="text-[11px] font-black text-white truncate tracking-tight mb-0.5">
+
+                  {{ "Eduke Institution" }}
+
+                </h4>
+
+                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none">Admin</p>
+
+              </div>
+
+
+
+            </div>
+
+
+
+            <div class="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+
+
+
+            <a href="{% url 'logout' %}"
+
+              class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 hover:border-rose-500 transition-all duration-300">
+
+              <span
+
+                class="text-[9px] font-black uppercase tracking-widest text-rose-400 group-hover/btn:text-white">Logout</span>
+
+              <i
+
+                class="fa-solid fa-power-off text-[10px] text-rose-500 group-hover/btn:text-white transition-colors"></i>
+
+            </a>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <header class="h-20 flex items-center justify-between px-8 shrink-0">
+        <div class="flex items-center gap-4">
+          <button id="hamburger-button" class="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl glass-card text-brand-500">
+            <i class="fa-solid fa-bars-staggered"></i>
+          </button>
+          <h1 class="text-xl font-black dark:text-white uppercase tracking-tighter">Performance <span class="text-brand-500 italic">Audit</span></h1>
+        </div>
+        <div class="flex items-center gap-4">
+          <button onclick="window.print()" class="hidden md:flex items-center gap-2 px-6 py-2.5 glass-card rounded-xl font-black text-[10px] uppercase tracking-widest text-slate-600 dark:text-white hover:scale-105 transition-all">
+            <i class="fa-solid fa-print text-brand-500"></i> Export PDF
+          </button>
+          <button id="theme-switch" class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center text-brand-600 dark:text-amber-400">
+            <i id="theme-icon" class="fa-solid fa-moon"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="flex-1 overflow-y-auto px-4 lg:px-8 pb-10 space-y-6 custom-scroll">
+        <section class="p-10 rounded-[3rem] bg-gradient-to-br from-brand-600 via-brand-700 to-indigo-900 text-white shadow-2xl relative overflow-hidden">
+          <div class="relative z-10">
+            <span class="px-3 py-1 rounded-full bg-white/10 border border-white/20 text-[10px] font-black uppercase tracking-[0.2em] mb-4 inline-block">Analytical Scope</span>
+            <h2 class="text-4xl font-black uppercase italic tracking-tighter leading-none">{{ student.name }}</h2>
+            <p class="text-brand-200 font-bold mt-2 opacity-80">Class: {{ student.class_name }} | Roll: #{{ student.roll_no }}</p>
+          </div>
+          <i class="fa-solid fa-chart-pie absolute -right-8 -bottom-8 text-[12rem] opacity-10 -rotate-12"></i>
+        </section>
+
+        <div class="glass-card rounded-[2.5rem] p-4">
+          <div class="flex items-center justify-between px-4">
+            <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Target Module</span>
+            <form method="GET" class="w-64">
+              <select name="subject_id" onchange="this.form.submit()" class="w-full bg-white/50 dark:bg-black/20 border-none rounded-xl px-4 py-2 text-xs font-black text-slate-700 dark:text-white focus:ring-2 focus:ring-brand-500">
+                <option value="" {% if not selected_subject_id %}selected{% endif %} hidden>Filter Subject</option>
+                {% for subject in subjects %}
+                <option value="{{ subject.id }}" {% if subject.id|stringformat:"s" == selected_subject_id|stringformat:"s" %}selected{% endif %}>{{ subject.name }}</option>
+                {% endfor %}
+              </select>
+            </form>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-[3rem] p-10">
+          <h3 class="text-xl font-black text-slate-800 dark:text-white uppercase mb-8 flex items-center gap-3">
+            <i class="fa-solid fa-brain text-brand-500 animate-pulse"></i> Behavioral Matrix
+          </h3>
+          <div class="h-[400px] w-full">
+            <canvas id="performanceChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="print-only">
+    <div class="text-center mb-6">
+      <h1 style="font-size: 24pt; font-weight: bold; margin-bottom: 4px;">Student Performance Report</h1>
+      <p style="font-size: 14pt; margin-bottom: 2px;">{{ institution.institution_name }}</p>
+      <p style="font-size: 10pt; color: #666; text-transform: uppercase;">Generated on {% now "d F Y" %}</p>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
+      <tbody>
+        <tr>
+          <td style="width: 30%; background-color: #f3f4f6; font-weight: bold; border: 1px solid #999; padding: 10px;">Student Name</td>
+          <td style="border: 1px solid #999; padding: 10px;">{{ student.name }}</td>
+        </tr>
+        <tr>
+          <td style="background-color: #f3f4f6; font-weight: bold; border: 1px solid #999; padding: 10px;">Roll Number</td>
+          <td style="border: 1px solid #999; padding: 10px;">{{ student.roll_no }}</td>
+        </tr>
+        <tr>
+          <td style="background-color: #f3f4f6; font-weight: bold; border: 1px solid #999; padding: 10px;">Class</td>
+          <td style="border: 1px solid #999; padding: 10px;">{{ student.class_name }}</td>
+        </tr>
+        <tr>
+          <td style="background-color: #f3f4f6; font-weight: bold; border: 1px solid #999; padding: 10px;">Subject</td>
+          <td style="border: 1px solid #999; padding: 10px;">
+            {% if selected_subject_id %}
+              {% for subject in subjects %}
+                {% if subject.id|stringformat:"s" == selected_subject_id|stringformat:"s" %}{{ subject.name }}{% endif %}
+              {% endfor %}
+            {% else %}
+              All Subjects
+            {% endif %}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 style="font-size: 16pt; font-weight: bold; margin-bottom: 12px; border-bottom: 2px solid #333; padding-bottom: 5px;">Performance Metrics</h2>
+    <table style="width: 100%; border-collapse: collapse;">
+      <tbody>
+        <tr>
+          <td style="width: 50%; background-color: #f9fafb; font-weight: bold; border: 1px solid #999; padding: 10px;">Marks Percentage</td>
+          <td style="border: 1px solid #999; padding: 10px;">{{ evaluations.marks_percentage|default:"0" }}%</td>
+        </tr>
+        <tr>
+          <td style="background-color: #f9fafb; font-weight: bold; border: 1px solid #999; padding: 10px;">Attendance Percentage</td>
+          <td style="border: 1px solid #999; padding: 10px;">{{ evaluations.attendance_percentage|default:"0" }}%</td>
+        </tr>
+        <tr>
+          <td style="background-color: #f9fafb; font-weight: bold; border: 1px solid #999; padding: 10px;">Quiz Percentage</td>
+          <td style="border: 1px solid #999; padding: 10px;">{{ quiz_percentage|default:"0" }}%</td>
+        </tr>
+        {% for label, val in ratings %}
+        <tr>
+          <td style="background-color: #f9fafb; font-weight: bold; border: 1px solid #999; padding: 10px;">{{ label }}</td>
+          <td style="border: 1px solid #999; padding: 10px;">{{ val|default:"N/A" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    document.addEventListener('mousemove', (e) => {
+      const spotlight = document.getElementById('spotlight');
+      if(spotlight) {
+        spotlight.style.setProperty('--x', `${e.clientX}px`);
+        spotlight.style.setProperty('--y', `${e.clientY}px`);
+      }
+    });
+
+    const themeBtn = document.getElementById('theme-switch');
+    themeBtn.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.theme = isDark ? 'dark' : 'light';
+      document.getElementById('theme-icon').className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+      updateChartTheme(isDark);
+    });
+
+    document.getElementById('hamburger-button').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('-translate-x-full');
+    });
+
+    const ctx = document.getElementById('performanceChart').getContext('2d');
+    const graphData = JSON.parse("{{ graph_data|escapejs }}");
+
+    let performanceChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ["Marks", "Attendance", "Study", "Sleep", "Participation", "Activity", "Quiz"],
+        datasets: [{
+          label: 'Efficiency Score',
+          data: graphData,
+          backgroundColor: '#8b5cf6',
+          borderRadius: 15,
+          barThickness: 35,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, max: 100, ticks: { font: { weight: '800' } } },
+          x: { ticks: { font: { weight: '800' } } }
+        }
+      }
+    });
+
+    function updateChartTheme(isDark) {
+      const textColor = isDark ? '#fff' : '#000';
+      performanceChart.options.scales.y.ticks.color = textColor;
+      performanceChart.options.scales.x.ticks.color = textColor;
+      performanceChart.update();
+    }
+  </script>
+        <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-active, .active, a[class*="bg-brand-500/10"][class*="text-white"], a[class*="bg-accent-fuchsia/10"][class*="text-white"], a[class*="bg-indigo-500/10"][class*="text-white"], a[class*="bg-emerald-500/10"][class*="text-white"]');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+</html>

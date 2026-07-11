@@ -1,0 +1,540 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Eduke | Marks Management</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+  <script>
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+            accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+    
+    html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.01em; background-color: #f8fafc; }
+    .dark body { background-color: #020617; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    #spotlight {
+      position: fixed; inset: 0; pointer-events: none;
+      background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.12) 0%, transparent 40%);
+      z-index: 5;
+    }
+
+    .glass-sidebar { background: rgba(10, 10, 20, 0.95); backdrop-filter: blur(30px); border-right: 1px solid rgba(139, 92, 246, 0.1); }
+    
+    .glass-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .dark .glass-card { background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); }
+
+    .nav-item-link { position: relative; transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); }
+    .nav-item-link.active { color: #a78bfa !important; background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%); }
+    .nav-item-link.active::before { content: ''; position: absolute; left: 0; top: 25%; height: 50%; width: 4px; background: #d946ef; box-shadow: 0 0 15px #d946ef; border-radius: 0 4px 4px 0; }
+
+    .input-node { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 1rem; transition: all 0.3s ease; outline: none; }
+    .dark .input-node { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.1); color: white; }
+    .input-node:focus { border-color: #7c3aed; box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1); }
+
+    .custom-scroll::-webkit-scrollbar { width: 5px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #8b5cf633; border-radius: 10px; }
+
+    /* Remove arrows/spinners */
+.input-node::-webkit-outer-spin-button,
+.input-node::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 8px;
+}
+.input-node[type=number] {
+    -moz-appearance: textfield;
+}
+
+/* Row highlight when typing */
+.registry-row:focus-within {
+    background-color: rgba(var(--brand-500-rgb, 99, 102, 241), 0.05);
+}
+
+/* Toast Messages */
+#toast-container {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: auto;
+    min-width: 18rem;
+    max-width: 22rem;
+    pointer-events: none;
+}
+
+.toast-message {
+    pointer-events: auto;
+    transform-origin: top right;
+    animation: toastSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes toastSlideIn {
+    from {
+        transform: translateX(100%) scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes toastFadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+.toast-animate-out {
+    animation: toastFadeOut 0.3s ease-out forwards;
+}
+
+.toast-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    border-radius: 0 0 0.75rem 0.75rem;
+}
+
+@keyframes toastProgress {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+  </style>
+</head>
+
+<body class="text-slate-900 dark:text-white">
+  <div id="spotlight"></div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="pointer-events-none">
+    {% if messages %}
+      {% for message in messages %}
+      <div class="toast-message glass-card !bg-white/90 dark:!bg-slate-900/90 border-l-4 {% if 'error' in message.tags or 'marks_error' in message.tags %}border-rose-500 bg-rose-500/5{% else %}border-emerald-500 bg-emerald-500/5{% endif %} p-4 shadow-2xl rounded-xl relative overflow-hidden pointer-events-auto hover:shadow-[0_15px_50px_rgba(0,0,0,0.2)] transition-all duration-300">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 {% if 'error' in message.tags or 'marks_error' in message.tags %}bg-rose-500 text-white{% else %}bg-emerald-500 text-white{% endif %} shadow-lg">
+            <i class="fa-solid {% if 'error' in message.tags or 'marks_error' in message.tags %}fa-circle-exclamation{% else %}fa-circle-check{% endif %} text-sm"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-bold text-slate-700 dark:text-slate-200 truncate max-w-[16rem]">{{ message }}</p>
+          </div>
+          <button onclick="this.closest('.toast-message').remove()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors shrink-0 p-1 hover:bg-slate-200/50 dark:hover:bg-white/10 rounded-md">
+            <i class="fa-solid fa-xmark text-base"></i>
+          </button>
+        </div>
+        <div class="toast-progress {% if 'error' in message.tags or 'marks_error' in message.tags %}bg-rose-500/30{% else %}bg-emerald-500/30{% endif %}" style="animation: toastProgress 4s linear forwards;"></div>
+      </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+    
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-full">
+      <div class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5">
+
+        <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+          <div class="flex items-center gap-3 group cursor-pointer">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 group-hover:rotate-12 transition-transform animate-pulse bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 bg-[length:200%_200%]">
+              <img src="{% static 'main/images/logobase_white.png' %}" alt="Logo" class="w-6 h-6 object-contain">
+            </div>
+            <div>
+              <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span class="text-accent-fuchsia">.</span></h2>
+              <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Faculty Portal</p>
+            </div>
+          </div>
+          <button id="close-sidebar" class="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white transition-all"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+
+        <nav class="flex-grow px-4 space-y-6 overflow-y-auto custom-scroll py-6">
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Management</p>
+            <div class="space-y-1">
+                <a href="{% url 'subject_head_dashboard' %}" class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-layer-group"></i><span class="font-bold text-sm">Dashboard</span>
+              </a>
+              <a href="{% url 'subject_head_subjects' %}" class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-book"></i><span class="font-bold text-sm">Your Subject</span>
+              </a>
+              <a href="{% url 'subject_head_class' %}" class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-chalkboard"></i><span class="font-bold text-sm">Your Class</span>
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Academic Tools</p>
+            <div class="space-y-1"> 
+              <a href="{% url 'subject_head_attendance' %}" class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-hand-point-up"></i><span class="font-bold text-sm">Attendance</span>
+              </a>
+              <a href="#" class="nav-item-link active flex items-center gap-3 px-6 py-3 rounded-xl text-white">
+                <i class="fa-solid fa-user-pen"></i><span class="font-bold text-sm">Student Marks</span>
+              </a>
+              <a href="{% url 'subject_head_evaluation' %}" class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-square-poll-vertical"></i><span class="font-bold text-sm">Evaluation</span>
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Communication</p>
+            <div class="space-y-1">
+              <a href="{% url 'subject_head_chat' %}" class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-comments"></i><span class="font-bold text-sm">Eduke Chat</span>
+              </a>
+              <a href="{% url 'subject_head_profile' %}" class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-circle-user"></i><span class="font-bold text-sm">Profile</span>
+              </a>
+            </div>
+          </div>
+        </nav>
+
+        <div class="p-4 mt-auto">
+          <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 shadow-lg font-black text-white uppercase">{{ subject_head_name|slice:":1" }}</div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-[11px] font-black text-white truncate uppercase">{{ subject_head_name }}</h4>
+                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Subject Head</p>
+              </div>
+            </div>
+            <a href="{% url 'logout' %}" class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 hover:text-white transition-all">
+              <span class="text-[9px] font-black uppercase tracking-widest">Logout</span>
+              <i class="fa-solid fa-power-off text-[10px]"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+      
+      <header class="h-24 flex items-center justify-between px-8 shrink-0">
+        <div class="flex items-center gap-6">
+          <button id="hamburger-button" class="lg:hidden w-12 h-12 flex items-center justify-center rounded-2xl glass-card text-brand-600 shadow-lg"><i class="fas fa-bars"></i></button>
+          <h2 class="text-2xl lg:text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic">Marks <span class="text-brand-500">Registry</span></h2>
+        </div>
+        <div class="flex items-center gap-4">
+          {% include 'subject_head/_notification_bell.html' %}
+          <button id="theme-switch" class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center hover:scale-110 transition-transform">
+            <i id="theme-icon" class="fa-solid fa-moon text-brand-600 text-lg"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="flex-1 overflow-y-auto px-4 lg:px-8 pb-12 space-y-8 custom-scroll">
+        
+        <div id="manual-entry-container" class="space-y-8">
+            <section class="group relative overflow-hidden rounded-[2.5rem] border border-white/20 bg-white/5 p-8 shadow-2xl backdrop-blur-md transition-all hover:border-white/30">
+    <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-500/10 blur-[80px] transition-all group-hover:bg-brand-500/20"></div>
+
+    <div class="relative z-10 flex flex-col items-center justify-between gap-8 md:flex-row">
+        <div>
+            <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1">
+                <div class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"></div>
+                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">Node Online</span>
+            </div>
+            
+            <h3 class="mb-1 text-4xl font-black italic tracking-tighter text-slate-900 dark:text-white uppercase">
+                Subject Indexing
+            </h3>
+            
+            <div class="flex items-center gap-3 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                <span>{{ subject.class_obj_name }}</span>
+                <span class="h-1 w-1 rounded-full bg-slate-300"></span>
+                <span class="text-brand-500">{{ subject.subject_name }}</span>
+            </div>
+        </div>
+
+        <button id="toggle-guidelines" class="group/btn relative flex items-center gap-3 overflow-hidden rounded-2xl bg-slate-950 px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-brand-600 hover:shadow-lg hover:shadow-brand-500/20 dark:bg-white dark:text-slate-950">
+            <svg class="h-4 w-4 transition-transform group-hover/btn:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Bulk Registry Sync
+        </button>
+    </div>
+</section>
+
+{% if messages %}{% endif %}
+
+            <div class="glass-card rounded-[3rem] border border-white/20 shadow-2xl bg-white/5 backdrop-blur-md">
+    <form method="POST" action="" class="space-y-0">
+        {% csrf_token %}
+        <div class="w-full overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 border-b border-slate-100 dark:border-white/10">
+                        <th class="px-10 py-8">Roll Index</th>
+                        <th class="px-8 py-8">Identity</th>
+                        <th class="px-10 py-8 text-right">Score Vector</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-white/5">
+                    {% for student in students %}
+                    <tr class="registry-row group/row transition-colors">
+                        <td class="px-10 py-6">
+                            <span class="font-mono text-xs font-black text-brand-600/80">
+                                #{{ student.roll_no }}
+                            </span>
+                        </td>
+                        <td class="px-8 py-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center font-black text-slate-500 group-hover/row:bg-slate-900 group-hover/row:text-white dark:group-hover/row:bg-white dark:group-hover/row:text-slate-900 transition-all">
+                                    {{ student.name|slice:":1" }}
+                                </div>
+                                <span class="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight">{{ student.name }}</span>
+                            </div>
+                        </td>
+                        <td class="px-10 py-6">
+                            <div class="flex justify-end">
+                                <div class="relative flex items-center">
+                                    <input type="number" name="marks_{{ student.id }}" 
+                                        class="input-node w-24 bg-transparent border-b-2 border-slate-200 dark:border-slate-700 py-2 px-1 text-right font-black text-xl text-brand-600 focus:border-brand-500 focus:outline-none transition-all"
+                                        value="{{ student.mark_percentage|default_if_none:'' }}" 
+                                        placeholder="0.00" min="0" max="100" step="0.01">
+                                    <span class="ml-2 text-xs font-black text-slate-300">%</span>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="p-10 bg-slate-50/50 dark:bg-white/5 border-t border-slate-100 dark:border-white/10">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    Confirm all entries before registry injection
+                </p>
+                <button type="submit" class="w-full md:w-auto px-12 py-5 rounded-2xl bg-slate-950 text-white font-black text-[11px] uppercase tracking-[0.4em] transition-all hover:bg-brand-600 hover:scale-[1.02] active:scale-[0.98] dark:bg-white dark:text-slate-950 shadow-xl shadow-brand-500/10">
+                    Update Registry Array
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+        </div>
+
+        <div id="file-guidelines" class="hidden space-y-8 animate-in fade-in slide-in-from-right duration-500">
+    <section class="glass-card relative overflow-hidden rounded-[3rem] border border-white/20 p-10 shadow-2xl backdrop-blur-xl">
+        
+        <div class="mb-10 flex items-start justify-between">
+            <div>
+                <h3 class="mb-1 text-3xl font-black uppercase italic tracking-tighter text-slate-800 dark:text-white">
+                    Bulk Registry Protocol
+                </h3>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">System Status: Awaiting Data Injection</p>
+            </div>
+            <button onclick="location.reload()" class="group flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 hover:bg-red-50 dark:bg-slate-800 transition-all">
+                <i class="fa-solid fa-xmark text-slate-500 group-hover:text-red-500"></i>
+            </button>
+        </div>
+        
+        <div class="grid gap-12 md:grid-cols-2">
+            <div class="space-y-8">
+                <div class="relative rounded-3xl border border-amber-200/50 bg-amber-50/50 p-6 dark:border-amber-900/20 dark:bg-amber-900/5">
+                    <div class="mb-4 flex items-center gap-3">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-900/30">
+                            <i class="fa-solid fa-shield-halved text-sm"></i>
+                        </div>
+                        <h4 class="text-xs font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">Mandatory Validation</h4>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between rounded-xl bg-white/50 p-3 dark:bg-slate-900/50 border border-amber-100/50">
+                            <span class="mono text-[10px] font-bold text-slate-400">01</span>
+                            <span class="mono text-[10px] font-black text-slate-700 dark:text-slate-200">ROLL_NO</span>
+                            <span class="rounded-md bg-amber-100 px-2 py-0.5 text-[8px] font-bold text-amber-700">REQUIRED</span>
+                        </div>
+                        <div class="flex items-center justify-between rounded-xl bg-white/50 p-3 dark:bg-slate-900/50 border border-amber-100/50">
+                            <span class="mono text-[10px] font-bold text-slate-400">02</span>
+                            <span class="mono text-[10px] font-black text-slate-700 dark:text-slate-200">MARKS_PERCENT</span>
+                            <span class="text-[9px] font-bold text-slate-400 italic">0-100</span>
+                        </div>
+                        <div class="flex items-center justify-between rounded-xl bg-white/50 p-3 dark:bg-slate-900/50 border border-amber-100/50">
+                            <span class="mono text-[10px] font-bold text-slate-400">03</span>
+                            <span class="mono text-[10px] font-black text-slate-700 dark:text-slate-200">SUBJECT_LABEL</span>
+                            <span class="text-[9px] font-bold text-brand-500">{{ subject.subject_name }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="{% url 'download_marks_template' subject.id %}" class="group flex items-center justify-center gap-3 rounded-2xl bg-brand-600 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-brand-500/20 transition-all hover:bg-brand-500 hover:-translate-y-1">
+                    <i class="fa-solid fa-file-csv text-lg transition-transform group-hover:rotate-12"></i>
+                    Get CSV Template Node
+                </a>
+            </div>
+
+            <div class="flex flex-col">
+                <form action="{% url 'upload_marks' %}" method="POST" enctype="multipart/form-data" class="flex flex-1 flex-col">
+                    {% csrf_token %}
+                    <label for="dropzone-file" class="group relative flex flex-1 flex-col items-center justify-center overflow-hidden rounded-[2.5rem] border-2 border-dashed border-slate-200 bg-slate-50/50 transition-all hover:border-brand-500/50 hover:bg-brand-50/30 dark:border-slate-800 dark:bg-slate-900/30">
+                        <div class="absolute inset-x-0 top-0 h-[2px] w-full bg-gradient-to-r from-transparent via-brand-500 to-transparent opacity-0 group-hover:animate-scan"></div>
+                        
+                        <div class="text-center">
+                            <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm transition-transform group-hover:scale-110 dark:bg-slate-800">
+                                <i class="fa-solid fa-cloud-arrow-up text-2xl text-brand-600"></i>
+                            </div>
+                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">Inject Data Packet</p>
+                            <p id="file-name-display" class="mt-2 text-xs font-bold text-emerald-600 mono h-4"></p>
+                        </div>
+                        <input id="dropzone-file" type="file" name="file" accept=".xlsx,.csv" required class="hidden" onchange="document.getElementById('file-name-display').innerText = this.files[0].name" />
+                    </label>
+
+                    <button id="execute-button" type="submit" class="mt-6 w-full overflow-hidden rounded-2xl bg-slate-950 py-5 text-[11px] font-black uppercase tracking-[0.3em] text-white transition-all hover:bg-emerald-600 dark:bg-white dark:text-slate-950">
+                        Execute Bulk Handshake
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+</div>
+
+      </div>
+    </main>
+  </div>
+
+  
+
+  <script>
+    // Spotlight Effect
+    window.addEventListener('mousemove', e => {
+      document.getElementById('spotlight').style.setProperty('--x', `${e.clientX}px`);
+      document.getElementById('spotlight').style.setProperty('--y', `${e.clientY}px`);
+    });
+
+    // Toggle Guidelines View
+    document.getElementById('toggle-guidelines').addEventListener('click', function() {
+        document.getElementById('manual-entry-container').classList.add('hidden');
+        document.getElementById('file-guidelines').classList.remove('hidden');
+    });
+
+    // File selection UI update
+    document.getElementById('dropzone-file').addEventListener('change', function(e) {
+        const name = e.target.files[0] ? e.target.files[0].name : "Packet Null";
+        document.getElementById('file-name').textContent = `📄 ${name}`;
+    });
+
+    // Theme Switch
+    const themeSwitch = document.getElementById('theme-switch');
+    const themeIcon = document.getElementById('theme-icon');
+    
+    // Initialize theme icon based on current theme
+    if (document.documentElement.classList.contains('dark')) {
+      themeIcon.className = 'fa-solid fa-sun text-yellow-400 text-lg';
+    } else {
+      themeIcon.className = 'fa-solid fa-moon text-brand-600 text-lg';
+    }
+    
+    themeSwitch.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      const isDark = document.documentElement.classList.contains('dark');
+      localStorage.theme = isDark ? 'dark' : 'light';
+      themeIcon.className = isDark ? 'fa-solid fa-sun text-yellow-400 text-lg' : 'fa-solid fa-moon text-brand-600 text-lg';
+    });
+
+    // Sidebar
+    const hamBtn = document.getElementById('hamburger-button');
+    const sidebar = document.getElementById('sidebar');
+    const closeBtn = document.getElementById('close-sidebar');
+    hamBtn.addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+    closeBtn.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+
+
+
+    // File selection UI update and Button Color Shift
+document.getElementById('dropzone-file').addEventListener('change', function(e) {
+    const name = e.target.files[0] ? e.target.files[0].name : "Packet Null";
+    const fileNameDisplay = document.getElementById('file-name');
+    const executeBtn = document.getElementById('execute-button');
+
+    fileNameDisplay.textContent = `📄 ${name}`;
+
+    if (e.target.files[0]) {
+        // Change button to success state (Emerald)
+        executeBtn.classList.remove('bg-slate-900', 'dark:bg-slate-800');
+        executeBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'scale-[1.02]');
+        executeBtn.innerHTML = '<i class="fa-solid fa-bolt-lightning mr-2"></i> Sync Data Packet';
+    } else {
+        // Reset to original state if selection is cleared
+        executeBtn.classList.add('bg-slate-900');
+        executeBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'scale-[1.02]');
+        executeBtn.textContent = 'Execute Bulk Handshake';
+    }
+});
+
+// Auto-fade toast messages
+document.addEventListener('DOMContentLoaded', function() {
+    const toasts = document.querySelectorAll('.toast-message');
+    toasts.forEach(toast => {
+        setTimeout(() => {
+            toast.classList.add('toast-animate-out');
+            setTimeout(() => toast.remove(), 300);
+        }, 4000); // Auto-fade after 4 seconds
+    });
+});
+
+// Add hover effect to pause auto-fade
+document.addEventListener('DOMContentLoaded', function() {
+    const toasts = document.querySelectorAll('.toast-message');
+    toasts.forEach(toast => {
+        const progress = toast.querySelector('.toast-progress');
+        toast.addEventListener('mouseenter', () => {
+            progress.style.animationPlayState = 'paused';
+        });
+        toast.addEventListener('mouseleave', () => {
+            progress.style.animationPlayState = 'running';
+        });
+    });
+});
+  </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-link.active');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+</html> 

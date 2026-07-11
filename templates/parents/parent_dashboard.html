@@ -1,0 +1,324 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduke | Parent Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+                        accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b', emerald: '#10b981' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        .dark body { background-color: #020617; }
+
+        #spotlight {
+            position: fixed; inset: 0; pointer-events: none;
+            background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.15) 0%, transparent 45%);
+            z-index: 1;
+        }
+        .nav-item-active {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            color: white !important;
+        }
+
+        .orb { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.4; z-index: 0; animation: float 20s infinite alternate; }
+        @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(100px, 50px); } }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4);
+        }
+
+        .glass-sidebar {
+            background: rgba(10, 10, 20, 0.98);
+            backdrop-filter: blur(40px);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.3); border-radius: 10px; }
+        
+        .dashboard-card:hover { transform: translateY(-10px); border-color: #8b5cf6; }
+        .dashboard-card img { transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1); }
+        .dashboard-card:hover img { transform: scale(1.1) rotate(5deg); opacity: 1; }
+    </style>
+</head>
+
+<body class="antialiased">
+    <div id="spotlight"></div>
+    <div class="orb w-96 h-96 bg-brand-500/10 top-0 left-0"></div>
+    <div class="orb w-80 h-80 bg-fuchsia-500/10 bottom-0 right-0" style="animation-delay: -5s;"></div>
+
+    <div class="relative z-10 flex h-screen overflow-hidden lg:p-6">
+        
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 h-full shrink-0">
+            <div class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden">
+                
+                <div class="p-8 pb-4 flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 shadow-lg">
+                        <img src="{% static 'main/images/logobase_white.png' %}" class="w-6 h-6">
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-black text-white uppercase italic tracking-tighter">Eduke<span class="text-accent-fuchsia">.</span></h2>
+                        <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Parent Portal</p>
+                    </div>
+                </div>
+
+                <nav class="flex-grow px-4 mt-6 space-y-6 overflow-y-auto custom-scroll py-4">
+                    
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">Command</p>
+                        <div class="space-y-1">
+                                <a href="{% url 'parent_dashboard' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 nav-item-active">
+                                <span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>
+                                <i class="fa-solid fa-layer-group text-brand-400"></i>
+                                <span class="font-bold text-sm">Dashboard</span>
+                            </a>
+                            </a>
+                            <a href="{% url 'parent_class' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-chalkboard"></i>
+                                <span class="font-bold text-sm">Your Class</span>
+                            </a>
+                            <a href="{% url 'parent_teacher_profile' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-chalkboard-user"></i>
+                                <span class="font-bold text-sm">Your Teacher</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">Analytics</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'parent_evaluation' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-square-poll-vertical"></i>
+                                <span class="font-bold text-sm">Evaluation</span>
+                            </a>
+                            <a href="{% url 'parent_student_performance' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-chart-line"></i>
+                                <span class="font-bold text-sm">Performance</span>
+                            </a>
+                            <a href="{% url 'parent_prediction' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-fire-flame-curved"></i>
+                                <span class="font-bold text-sm">Score Prediction</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">Comms</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'parent_eduke_bot' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-robot"></i>
+                                <span class="font-bold text-sm">Eduke Bot</span>
+                            </a>
+                            <a href="{% url 'parent_chat' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-comments"></i>
+                                <span class="font-bold text-sm">Eduke Chat</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">User</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'parent_profile' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-circle-user"></i>
+                                <span class="font-bold text-sm">Profile Settings</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+
+                <div class="p-4 shrink-0 mt-auto mb-2 lg:mb-4">
+                    <div class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3 transition-all hover:border-white/20">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 font-black text-white text-xs">
+                                {{ parent_name|slice:":1"|default:"P" }}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="text-[11px] font-black text-white truncate uppercase">{% if parent_name %}
+                                    {{ parent_name }}
+                                    {% else %}
+                                    Parent of {{ student_name|truncatewords:1|cut:"..."|cut:"…" }}
+                                    {% endif %}</h4>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none">Parent</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'logout' %}" class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 transition-all duration-300">
+                            <span class="text-[9px] font-black uppercase tracking-widest group-hover/btn:text-white">Logout</span>
+                            <i class="fa-solid fa-power-off text-[10px] group-hover/btn:text-white transition-colors"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <header class="h-20 flex items-center justify-between px-8 shrink-0 relative z-20">
+                <div class="flex items-center gap-4">
+                    <button id="hamburger-button" class="lg:hidden w-10 h-10 glass-card rounded-xl flex items-center justify-center text-brand-600">
+                        <i class="fa-solid fa-bars-staggered"></i>
+                    </button>
+                    <h1 class="text-xl font-black dark:text-white uppercase tracking-tighter leading-none">Gateway <span class="text-brand-500 italic">Interface</span></h1>
+                </div>
+                <div class="relative flex items-center gap-4">
+                    {% include 'parents/_notification_bell.html' %}
+                    <button id="theme-switch" class="w-12 h-12 glass-card rounded-2xl flex items-center justify-center text-brand-600 dark:text-amber-400 hover:scale-110 transition-transform shadow-lg">
+                        <i id="theme-icon" class="fa-solid fa-moon"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div id="content-wrapper" class="flex-1 overflow-y-auto px-4 lg:px-10 pb-12 space-y-10 custom-scroll">
+                
+                <section class="p-12 rounded-[3.5rem] bg-gradient-to-br from-brand-600 via-brand-700 to-indigo-900 text-white shadow-2xl relative overflow-hidden group">
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-6">
+                            <span class="px-3 py-1 rounded-full bg-white/10 border border-white/20 text-[10px] font-black uppercase tracking-[0.2em]">Authorized Portal</span>
+                        </div>
+                        <h1 class="text-5xl font-black uppercase italic tracking-tighter leading-none mb-4">Welcome back</h1>
+                        <p class="text-brand-100 font-bold mt-2 uppercase text-xs tracking-[0.3em]">Parent of <span class="text-accent-fuchsia underline decoration-2 underline-offset-8">{{ student_name }}</span></p>
+                    </div>
+                    <i class="fa-solid fa-user-shield absolute -right-12 -bottom-12 text-[18rem] opacity-5 -rotate-12 group-hover:rotate-0 transition-transform duration-1000"></i>
+                </section>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                    
+                    <a href="{% url 'parent_class' %}" class="dashboard-card glass-card relative p-10 rounded-[3rem] overflow-hidden group">
+                        <div class="relative z-10">
+                            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3">Academic Unit</h3>
+                            <p class="text-2xl font-black text-slate-900 dark:text-white uppercase leading-none mb-6">Your Child's<br>Classroom</p>
+                            <span class="px-4 py-2 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 text-xs font-black uppercase">{{ student_class }}</span>
+                        </div>
+                        <img src="{% static 'main/images/your_class.png' %}" class="absolute -right-6 -bottom-6 w-44 opacity-40 group-hover:opacity-100">
+                    </a>
+
+                    <a href="{% url 'parent_student_performance' %}" class="dashboard-card glass-card relative p-10 rounded-[3rem] overflow-hidden group">
+                        <div class="relative z-10">
+                            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3">Metrics Analysis</h3>
+                            <p class="text-2xl font-black text-slate-900 dark:text-white uppercase leading-none mb-6">Child's<br>Performance</p>
+                            <p class="text-[11px] font-bold text-indigo-500 underline decoration-indigo-500/30 underline-offset-4">View Grade Profile →</p>
+                        </div>
+                        <img src="{% static 'main/images/subject.png' %}" class="absolute -right-6 -bottom-6 w-44 opacity-40 group-hover:opacity-100">
+                    </a>
+
+                    <a href="{% url 'parent_evaluation' %}" class="dashboard-card glass-card relative p-10 rounded-[3rem] overflow-hidden group">
+                        <div class="relative z-10">
+                            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3">Behavioral Track</h3>
+                            <p class="text-2xl font-black text-slate-900 dark:text-white uppercase leading-none mb-6">Daily<br>Evaluation</p>
+                            <span class="text-[10px] font-black uppercase text-emerald-500 flex items-center gap-2"><i class="fa-solid fa-circle-check"></i> Evaluate Child</span>
+                        </div>
+                        <img src="{% static 'main/images/eval.png' %}" class="absolute -right-6 -bottom-6 w-44 opacity-40 group-hover:opacity-100">
+                    </a>
+
+                    <a href="{% url 'parent_prediction' %}" class="dashboard-card glass-card relative p-10 rounded-[3rem] overflow-hidden group">
+                        <div class="relative z-10">
+                            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3">AI Forecast</h3>
+                            <p class="text-2xl font-black text-slate-900 dark:text-white uppercase leading-none mb-6">Score<br>Prediction</p>
+                            <div class="mt-4 flex gap-2">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Model Active</p>
+                            </div>
+                        </div>
+                        <img src="{% static 'main/images/predict.png' %}" class="absolute -right-6 -bottom-6 w-44 opacity-40 group-hover:opacity-100">
+                    </a>
+
+                    <a href="{% url 'parent_eduke_bot' %}" class="dashboard-card glass-card relative p-10 rounded-[3rem] overflow-hidden group">
+                        <div class="relative z-10">
+                            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3">Smart AI</h3>
+                            <p class="text-2xl font-black text-slate-900 dark:text-white uppercase leading-none mb-6">Eduke<br>Bot Agent</p>
+                            <p class="text-[11px] font-bold text-accent-fuchsia uppercase tracking-widest">Query Assistant →</p>
+                        </div>
+                        <img src="{% static 'main/images/bot.png' %}" class="absolute -right-6 -bottom-6 w-44 opacity-40 group-hover:opacity-100">
+                    </a>
+
+                    <a href="{% url 'parent_chat' %}" class="dashboard-card glass-card relative p-10 rounded-[3rem] overflow-hidden group">
+                        <div class="relative z-10">
+                            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-3">Comms Link</h3>
+                            <p class="text-2xl font-black text-slate-900 dark:text-white uppercase leading-none mb-6">Eduke<br>Terminal</p>
+                            <p class="text-[11px] font-bold text-amber-500 uppercase tracking-widest">Encrypted Chat →</p>
+                        </div>
+                        <img src="{% static 'main/images/chat.png' %}" class="absolute -right-6 -bottom-6 w-44 opacity-40 group-hover:opacity-100">
+                    </a>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('mousemove', (e) => {
+            const spotlight = document.getElementById('spotlight');
+            spotlight.style.setProperty('--x', `${e.clientX}px`);
+            spotlight.style.setProperty('--y', `${e.clientY}px`);
+        });
+
+        const themeBtn = document.getElementById('theme-switch');
+        const themeIcon = document.getElementById('theme-icon');
+        
+        // Initialize theme icon based on current theme
+        if (document.documentElement.classList.contains('dark')) {
+            themeIcon.className = 'fa-solid fa-sun text-amber-400';
+        } else {
+            themeIcon.className = 'fa-solid fa-moon text-brand-600';
+        }
+        
+        themeBtn.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            themeIcon.className = isDark ? 'fa-solid fa-sun text-amber-400' : 'fa-solid fa-moon text-brand-600';
+        });
+
+        const hamburger = document.getElementById('hamburger-button');
+        const sidebar = document.getElementById('sidebar');
+        hamburger.addEventListener('click', () => {
+            sidebar.classList.toggle('-translate-x-full');
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-active, .active, a[class*="bg-brand-500/10"][class*="text-white"], a[class*="bg-accent-fuchsia/10"][class*="text-white"], a[class*="bg-indigo-500/10"][class*="text-white"], a[class*="bg-emerald-500/10"][class*="text-white"]');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+</html>

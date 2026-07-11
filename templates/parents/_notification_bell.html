@@ -1,0 +1,205 @@
+<!-- Notification Bell Component -->
+<button id="notification-bell" class="relative w-12 h-12 rounded-2xl glass-card flex items-center justify-center hover:scale-110 transition-transform" title="Notifications">
+  <i class="fa-solid fa-bell text-brand-600 dark:text-amber-400 text-lg"></i>
+  <span id="notification-badge" class="hidden absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center animate-pulse">0</span>
+</button>
+
+<!-- Notification Dropdown -->
+<div id="notification-dropdown" class="hidden absolute right-8 top-20 w-80 glass-card rounded-2xl shadow-2xl border border-white/20 z-50 overflow-hidden">
+  <div class="bg-gradient-to-r from-brand-600 to-indigo-700 px-5 py-4">
+    <div class="flex items-center justify-between">
+      <h3 class="text-white font-black text-sm uppercase tracking-wider">New Messages</h3>
+      <span id="dropdown-total" class="px-2 py-1 bg-white/20 rounded-lg text-white text-[10px] font-black">0</span>
+    </div>
+  </div>
+  
+  <div id="notification-list" class="max-h-80 overflow-y-auto custom-scroll py-2">
+    <!-- Notifications will be loaded here -->
+    <div class="px-5 py-8 text-center">
+      <i class="fa-solid fa-spinner fa-spin text-2xl text-slate-400"></i>
+      <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">Loading...</p>
+    </div>
+  </div>
+  
+  <div class="border-t border-white/10 px-5 py-3 bg-white/5">
+    <a href="{% url 'parent_chat' %}" class="text-[9px] font-black text-brand-500 uppercase tracking-widest hover:text-brand-600 transition-colors block text-center">
+      View All Messages →
+    </a>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Check if on chat user page (skip showing badge there)
+  const isChatUserPage = window.location.pathname.includes('/parent/parent_chat_user/');
+  
+  let unreadCount = 0;
+  let pollInterval;
+  
+  // Get CSRF token
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  
+  // Fetch unread count from API
+  function fetchUnreadCount() {
+    console.log('🔔 Fetching unread count...');
+    fetch("{% url 'parent_get_unread_count' %}", {
+      method: 'GET',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      credentials: 'same-origin'
+    })
+      .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+      })
+      .then(data => {
+        console.log('Unread data received:', data);
+        unreadCount = data.total_unread || 0;
+        updateNotificationUI(data);
+      })
+      .catch(error => {
+        console.error('Error fetching unread count:', error);
+        // Show empty state on error
+        const notificationList = document.getElementById('notification-list');
+        if (notificationList) {
+          notificationList.innerHTML = `
+            <div class="px-5 py-8 text-center">
+              <i class="fa-solid fa-circle-exclamation text-3xl text-slate-400 mb-2"></i>
+              <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Unable to load</p>
+            </div>
+          `;
+        }
+      });
+  }
+  
+  // Update notification UI
+  function updateNotificationUI(data) {
+    const badge = document.getElementById('notification-badge');
+    const dropdown = document.getElementById('notification-dropdown');
+    const notificationList = document.getElementById('notification-list');
+    const dropdownTotal = document.getElementById('dropdown-total');
+    
+    console.log('Updating UI - Badge element:', badge);
+    console.log('Unread count:', unreadCount);
+    
+    // Update badge
+    if (!isChatUserPage && unreadCount > 0) {
+      badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+      badge.classList.remove('hidden');
+      console.log('Badge shown with count:', unreadCount);
+    } else {
+      badge.classList.add('hidden');
+      console.log('Badge hidden');
+    }
+    
+    // Update dropdown total
+    dropdownTotal.textContent = unreadCount;
+    
+    // Update notification list
+    if (data.senders && data.senders.length > 0) {
+      let html = '';
+      data.senders.forEach(sender => {
+        let colorClass = 'from-blue-500 to-cyan-600';
+        let roleName = sender.role;
+        
+        if (sender.role === 'class_head') {
+          colorClass = 'from-purple-500 to-indigo-600';
+          roleName = 'Class Head';
+        } else if (sender.role === 'subject_head') {
+          colorClass = 'from-emerald-500 to-teal-600';
+          roleName = 'Subject Head';
+        }
+        
+        html += `
+          <a href="/parent_chat/${sender.sender_id}/" 
+             class="flex items-center gap-3 px-5 py-3 hover:bg-white/5 transition-colors group">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br ${colorClass} text-white flex items-center justify-center text-sm font-black shadow-lg group-hover:scale-110 transition-transform">
+              ${sender.sender_name.charAt(0).toUpperCase()}
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[11px] font-bold text-slate-800 dark:text-white truncate">${sender.sender_name}</p>
+              <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">${roleName} • ${sender.count} new message${sender.count > 1 ? 's' : ''}</p>
+            </div>
+            <div class="w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[8px] font-black animate-pulse">
+              ${sender.count}
+            </div>
+          </a>
+        `;
+      });
+      notificationList.innerHTML = html;
+      console.log('Notification list updated with', data.senders.length, 'senders');
+    } else {
+      notificationList.innerHTML = `
+        <div class="px-5 py-8 text-center">
+          <i class="fa-solid fa-check-circle text-3xl text-emerald-500 mb-2"></i>
+          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">All caught up!</p>
+        </div>
+      `;
+      console.log('No notifications - showing empty state');
+    }
+  }
+  
+  // Toggle dropdown
+  const bellBtn = document.getElementById('notification-bell');
+  const dropdown = document.getElementById('notification-dropdown');
+  
+  if (bellBtn) {
+    bellBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('hidden');
+      fetchUnreadCount(); // Refresh when opened
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target) && !bellBtn.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
+  }
+  
+  // Initial fetch
+  setTimeout(fetchUnreadCount, 500);
+  
+  // Poll for updates every 3 seconds
+  pollInterval = setInterval(fetchUnreadCount, 3000);
+  
+  // Stop polling when leaving page
+  window.addEventListener('beforeunload', () => {
+    clearInterval(pollInterval);
+  });
+})();
+</script>
+
+<style>
+#notification-dropdown {
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>

@@ -1,0 +1,547 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduke | Teacher Profile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+    <script>
+        // Initial Theme Check
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa',
+                            500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95',
+                        },
+                        accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b', emerald: '#10b981' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            overflow: hidden;
+        }
+
+        .dark body { background-color: #020617; }
+
+        #spotlight {
+            position: fixed; inset: 0; pointer-events: none;
+            background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.12) 0%, transparent 35%);
+            z-index: 1;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-sidebar {
+            background: #0a0a14;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 0.875rem 1.25rem;
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid #e2e8f0;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .dark .input-field {
+            background: rgba(30, 41, 59, 0.5);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+        }
+
+        ::-webkit-scrollbar { width: 0px; }
+
+        /* Animation Utility */
+        .animate-in { animation: enter 0.4s ease-out; }
+        @keyframes enter {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Success Toast Notification */
+        .success-toast {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.25rem 1.5rem;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(16px);
+            border-left: 4px solid #10b981;
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: translateX(0);
+            opacity: 1;
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .dark .success-toast {
+            background: rgba(15, 23, 42, 0.95);
+        }
+
+        .success-toast.fade-out {
+            transform: translateX(150%);
+            opacity: 0;
+        }
+
+        .success-toast-icon {
+            flex-shrink: 0;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 1rem;
+            background: rgba(16, 185, 129, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #10b981;
+        }
+
+        .dark .success-toast-icon {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .success-toast-message {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+        }
+
+        .dark .success-toast-message {
+            color: #f1f5f9;
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+    <div id="spotlight"></div>
+
+    <!-- Success Toast Notification -->
+    {% if messages %}
+    <div id="success-toast" class="success-toast">
+        <div class="success-toast-icon">
+            <i class="fa-solid fa-check-double text-xl"></i>
+        </div>
+        <div>
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Update Successful</p>
+            <p class="success-toast-message">{% for message in messages %}{{ message }}{% endfor %}</p>
+        </div>
+        <button onclick="dismissToast()" class="ml-4 text-slate-400 hover:text-rose-500 transition-colors p-1">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+    </div>
+    {% endif %}
+
+    <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 h-[100dvh] lg:h-full">
+            <div class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden">
+                
+                <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+                    <div class="flex items-center gap-3 group cursor-pointer">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 dark:border-white/10 bg-white/10 dark:bg-white/5 group-hover:rotate-12 transition-transform animate-pulse bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 bg-[length:200%_200%]">
+                            <img src="{% static 'main/images/logobase_white.png' %}" class="w-6 h-6 object-contain">
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span class="text-accent-fuchsia">.</span></h2>
+                            <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Command</p>
+                        </div>
+                    </div>
+                    <button id="close-sidebar" class="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white transition-all">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <nav class="flex-grow px-4 space-y-4 overflow-y-auto custom-scroll py-2">
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Navigation</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'class_head_dashboard' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_dashboard' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %}">
+                                {% if request.resolver_match.url_name == 'class_head_dashboard' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-layer-group {% if request.resolver_match.url_name == 'class_head_dashboard' %}text-brand-400{% else %}group-hover:text-brand-400{% endif %}"></i>
+                                <span class="font-bold text-sm">Dashboard</span>
+                            </a>
+                            <a href="{% url 'class_head_class' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_class' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %} group">
+                                {% if request.resolver_match.url_name == 'class_head_class' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-chalkboard {% if request.resolver_match.url_name == 'class_head_class' %}text-brand-400{% else %}group-hover:text-brand-400{% endif %} transition-colors"></i>
+                                <span class="font-bold text-sm">Your Class</span>
+                            </a>
+                            <a href="{% url 'class_head_students' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_students' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %} group">
+                                {% if request.resolver_match.url_name == 'class_head_students' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-user-group {% if request.resolver_match.url_name == 'class_head_students' %}text-accent-fuchsia{% else %}group-hover:text-accent-fuchsia{% endif %} transition-colors"></i>
+                                <span class="font-bold text-sm">Students</span>
+                            </a>
+                            <a href="{% url 'class_head_reports' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_reports' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %} group">
+                                {% if request.resolver_match.url_name == 'class_head_reports' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-chart-bar {% if request.resolver_match.url_name == 'class_head_reports' %}text-emerald-400{% else %}group-hover:text-emerald-400{% endif %} transition-colors"></i>
+                                <span class="font-bold text-sm">Reports</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Communication</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'class_head_chat' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_chat' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %} group">
+                                {% if request.resolver_match.url_name == 'class_head_chat' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-comments {% if request.resolver_match.url_name == 'class_head_chat' %}text-indigo-400{% else %}group-hover:text-indigo-400{% endif %} transition-colors"></i>
+                                <span class="font-bold text-sm">Eduke Chat</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div>
+    <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">User</p>
+    <div class="space-y-1">
+        <a href="{% url 'class_head_profile' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_profile' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %} group">
+            
+            {% if request.resolver_match.url_name == 'class_head_profile' %}
+                <span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>
+            {% endif %}
+            
+            <i class="fa-solid fa-circle-user text-base {% if request.resolver_match.url_name == 'class_head_profile' %}text-brand-400{% else %}group-hover:text-brand-400{% endif %}"></i>
+            
+            <span class="font-bold text-sm tracking-wide antialiased">Profile</span>
+        </a>
+    </div>
+</div>
+                </nav>
+
+                <div class="p-4 shrink-0 mt-auto mb-2 lg:mb-4">
+                    <div class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3 transition-all hover:border-white/20">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 font-black text-white text-xs">
+                                {{ class_head.class_head|slice:":1" }}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="text-[11px] font-black text-white truncate uppercase">{{ class_head.class_head }}</h4>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none">Class Head</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'logout' %}" class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 transition-all duration-300">
+                            <span class="text-[9px] font-black uppercase tracking-widest group-hover/btn:text-white">Logout</span>
+                            <i class="fa-solid fa-power-off text-[10px] group-hover/btn:text-white transition-colors"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <header class="h-20 flex items-center justify-between px-8 shrink-0">
+                <div class="flex items-center gap-4">
+                    <button id="hamburger-button" class="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl glass-card">
+                        <i class="fa-solid fa-bars-staggered text-brand-600"></i>
+                    </button>
+                    <h1 class="text-xl font-black dark:text-white uppercase tracking-tight">Teacher <span class="text-brand-500">Registry</span></h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    {% include 'class_head/_notification_bell.html' %}
+                    <button id="theme-switch" class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center text-brand-600 dark:text-amber-400 hover:scale-110 transition-transform shadow-lg">
+                        <i id="theme-icon" class="fa-solid fa-moon"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto px-4 lg:px-8 pb-10">
+                <div class="max-w-5xl mx-auto space-y-6">
+                    
+                    <section class="p-8 rounded-[2.5rem] bg-gradient-to-br from-brand-600 to-indigo-700 text-white shadow-xl relative overflow-hidden">
+                        <div class="relative z-10">
+                            <h2 class="text-3xl font-black uppercase italic tracking-tighter">Profile Protocol</h2>
+                            <p class="text-brand-100 font-bold opacity-80 uppercase text-[10px] tracking-widest mt-1">Manage your administrative identity</p>
+                        </div>
+                        <i class="fa-solid fa-user-gear absolute -right-4 -bottom-4 text-9xl opacity-10"></i>
+                    </section>
+
+                    <div class="glass-card rounded-[3rem] p-8 lg:p-12 shadow-2xl relative overflow-hidden">
+                        <form method="POST" action="{% url 'class_head_profile' %}" class="space-y-10 relative z-10" onsubmit="return validateForm()">
+                            {% csrf_token %}
+
+                            <div class="space-y-6">
+                                <div class="flex items-center gap-3 border-b border-slate-200 dark:border-white/5 pb-4">
+                                    <span class="w-1.5 h-8 bg-brand-500 rounded-full"></span>
+                                    <h3 class="text-sm font-black dark:text-white uppercase tracking-widest">Personal Identification</h3>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="space-y-1 group">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 group-focus-within:text-brand-500 transition-colors">Legal Name</label>
+                                        <input type="text" name="name" value="{{ class_head.class_head }}" class="input-field" placeholder="Enter Full Name">
+                                    </div>
+                                    <div class="space-y-1 group">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 group-focus-within:text-brand-500 transition-colors">Registry Password</label>
+                                        <input type="password" id="password-input" name="password" value="{{ decrypted_password }}" 
+                                               class="input-field" onfocus="showPasswordValidation(); this.type='text'" onblur="hidePasswordValidation(); this.type='password'" 
+                                               oninput="checkPassword(this.value)" placeholder="Security Key">
+                                    </div>
+                                </div>
+
+                                <div id="password-validation" class="hidden animate-in">
+                                    <div class="mt-2 p-6 rounded-3xl bg-[#f8fafc]/50 dark:bg-[#020617]/40 border border-slate-100 dark:border-white/5 backdrop-blur-md">
+                                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                            <div id="v-len" class="flex items-center gap-3 text-[9px] font-black uppercase text-rose-500 transition-all duration-300">
+                                                <div class="w-2 h-2 rounded-full bg-current"></div> 6+ Characters
+                                            </div>
+                                            <div id="v-up" class="flex items-center gap-3 text-[9px] font-black uppercase text-rose-500 transition-all duration-300">
+                                                <div class="w-2 h-2 rounded-full bg-current"></div> 1 Uppercase
+                                            </div>
+                                            <div id="v-low" class="flex items-center gap-3 text-[9px] font-black uppercase text-rose-500 transition-all duration-300">
+                                                <div class="w-2 h-2 rounded-full bg-current"></div> 1 Lowecase
+                                            </div>
+                                            <div id="v-num" class="flex items-center gap-3 text-[9px] font-black uppercase text-rose-500 transition-all duration-300">
+                                                <div class="w-2 h-2 rounded-full bg-current"></div> 1 Digit
+                                            </div>
+                                            <div id="v-spl" class="flex items-center gap-3 text-[9px] font-black uppercase text-rose-500 transition-all duration-300">
+                                                <div class="w-2 h-2 rounded-full bg-current"></div> 1 Special
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-6">
+                                <div class="flex items-center gap-3 border-b border-slate-200 dark:border-white/5 pb-4">
+                                    <span class="w-1.5 h-8 bg-accent-fuchsia rounded-full"></span>
+                                    <h3 class="text-sm font-black dark:text-white uppercase tracking-widest">Institution Metadata</h3>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div class="p-5 rounded-2xl bg-white/50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Email</p>
+                                        <p class="text-xs font-bold text-brand-600 dark:text-brand-400 truncate">{{ class_head.email }}</p>
+                                    </div>
+                                    <div class="p-5 rounded-2xl bg-white/50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Assigned Class</p>
+                                        <p class="text-xs font-bold text-accent-fuchsia truncate">{{ class_head.class_name }}</p>
+                                    </div>
+                                    <div class="p-5 rounded-2xl bg-white/50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Privilege Level</p>
+                                        <p class="text-xs font-bold text-emerald-500 uppercase">Class Head</p>
+                                    </div>
+                                    <div class="p-5 rounded-2xl bg-white/50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Institution</p>
+                                        <p class="text-xs font-bold text-indigo-500 truncate">{{ institution_name }}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="pt-8 border-t border-slate-200 dark:border-white/5 flex flex-col sm:flex-row justify-between gap-4">
+                                <a href="{% url 'class_head_dashboard' %}" class="px-8 py-4 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 rounded-2xl font-black text-[11px] uppercase tracking-widest text-center hover:bg-slate-200 dark:hover:bg-white/10 transition-all border border-slate-200 dark:border-white/5">
+                                    Abort Changes
+                                </a>
+                                <button type="submit" class="px-10 py-4 bg-brand-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl hover:bg-brand-700 hover:-translate-y-0.5 transition-all shadow-brand-500/20">
+                                    Update Identity Profile
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Spotlight Movement
+        document.addEventListener('mousemove', (e) => {
+            const spotlight = document.getElementById('spotlight');
+            spotlight.style.setProperty('--x', `${e.clientX}px`);
+            spotlight.style.setProperty('--y', `${e.clientY}px`);
+        });
+
+        // Sidebar Toggle
+        const hamburgerButton = document.getElementById('hamburger-button');
+        const sidebar = document.getElementById('sidebar');
+        const closeSidebar = document.getElementById('close-sidebar');
+
+        hamburgerButton.addEventListener('click', () => {
+            sidebar.classList.remove('-translate-x-full');
+        });
+        closeSidebar.addEventListener('click', () => {
+            sidebar.classList.add('-translate-x-full');
+        });
+
+        // Theme Switch
+        const themeBtn = document.getElementById('theme-switch');
+        const themeIcon = document.getElementById('theme-icon');
+        
+        function updateThemeUI() {
+            const isDark = document.documentElement.classList.contains('dark');
+            themeIcon.className = isDark ? 'fa-solid fa-sun text-amber-400' : 'fa-solid fa-moon text-brand-600';
+        }
+        updateThemeUI();
+
+        themeBtn.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            updateThemeUI();
+        });
+
+        // Show password validation when field is focused
+        function showPasswordValidation() {
+            const validationContainer = document.getElementById('password-validation');
+            validationContainer.classList.remove('hidden');
+            
+            // Also show validation for current password value
+            const passwordInput = document.getElementById('password-input');
+            checkPassword(passwordInput.value);
+        }
+        
+        // Hide password validation when field is unfocused
+        function hidePasswordValidation() {
+            const validationContainer = document.getElementById('password-validation');
+            validationContainer.classList.add('hidden');
+        }
+        
+        // Password Validation Logic
+        function checkPassword(val) {
+            const validationContainer = document.getElementById('password-validation');
+            
+            // Show validation when there's content and field is focused
+            const passwordInput = document.getElementById('password-input');
+            if (document.activeElement === passwordInput && val.length > 0) {
+                validationContainer.classList.remove('hidden');
+            }
+
+            const requirements = {
+                'v-len': val.length >= 6,
+                'v-up': /[A-Z]/.test(val),
+                'v-low': /[a-z]/.test(val),
+                'v-num': /[0-9]/.test(val),
+                'v-spl': /[!@#$%^&*(),.?":{}|<>]/.test(val)
+            };
+
+            // Check if all requirements are met
+            let allValid = true;
+            for (const [id, met] of Object.entries(requirements)) {
+                const el = document.getElementById(id);
+                if (met) {
+                    el.classList.replace('text-rose-500', 'text-emerald-500');
+                } else {
+                    el.classList.replace('text-emerald-500', 'text-rose-500');
+                    allValid = false;
+                }
+            }
+            
+            // Enable/disable the submit button based on password validity
+            const submitBtn = document.querySelector('button[type="submit"]');
+            if (val !== '' && !allValid) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                submitBtn.classList.remove('hover:bg-brand-700', 'hover:-translate-y-0.5');
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                submitBtn.classList.add('hover:bg-brand-700', 'hover:-translate-y-0.5');
+            }
+            
+            // Update the button text to indicate disabled state
+            if (val !== '' && !allValid) {
+                submitBtn.textContent = 'PASSWORD INVALID';
+            } else {
+                submitBtn.textContent = 'Update Identity Profile';
+            }
+            
+            return allValid;
+        }
+        
+        // Form validation function
+        function validateForm() {
+            const passwordInput = document.getElementById('password-input');
+            const passwordValue = passwordInput.value;
+            
+            // If password field is empty, allow form submission
+            if (passwordValue === '') {
+                return true;
+            }
+            
+            // Check if password meets all requirements
+            const requirements = {
+                'len': passwordValue.length >= 6,
+                'up': /[A-Z]/.test(passwordValue),
+                'low': /[a-z]/.test(passwordValue),
+                'num': /[0-9]/.test(passwordValue),
+                'spl': /[!@#$%^&*(),.?":{}|<>]/.test(passwordValue)
+            };
+            
+            let allValid = true;
+            for (const [_, met] of Object.entries(requirements)) {
+                if (!met) {
+                    allValid = false;
+                    break;
+                }
+            }
+            
+            return allValid;
+        }
+        
+        // Reset button text when form loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const submitBtn = document.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.textContent = 'Update Identity Profile';
+            }
+            
+            // Auto-dismiss success toast after 4 seconds
+            const toast = document.getElementById('success-toast');
+            if (toast) {
+                setTimeout(() => {
+                    toast.classList.add('fade-out');
+                    setTimeout(() => toast.remove(), 500);
+                }, 4000);
+            }
+        });
+        
+        // Dismiss toast function
+        function dismissToast() {
+            const toast = document.getElementById('success-toast');
+            if (toast) {
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.remove(), 500);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,244 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Parent Portal | Eduke Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            900: '#1e1b4b'
+                        }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'scan': 'scan 3s linear infinite',
+                    },
+                    keyframes: {
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-20px)' } },
+                        scan: { '0%': { top: '0%' }, '100%': { top: '100%' } }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg-gradient: radial-gradient(circle at top right, #f5f3ff, #ede9fe, #ddd6fe);
+        }
+        .dark {
+            --bg-gradient: radial-gradient(circle at top right, #1e1b4b, #0f172a, #020617);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-gradient);
+            height: 100vh;
+            overflow: hidden;
+            transition: background 0.5s ease;
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        .super-glass {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(25px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(139, 92, 246, 0.1);
+        }
+
+        .dark .super-glass {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+        }
+
+        .input-violet {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            transition: all 0.3s ease;
+        }
+        .dark .input-violet {
+            background: rgba(2, 6, 23, 0.5);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            color: white;
+        }
+        .input-violet:focus {
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+        }
+
+        .blob {
+            position: absolute; width: 600px; height: 600px;
+            background: linear-gradient(to right, #8b5cf6, #d8b4fe);
+            filter: blur(120px); border-radius: 50%; z-index: -1; opacity: 0.2;
+        }
+    </style>
+</head>
+
+<body class="flex items-center justify-center p-4">
+    <div class="blob -top-40 -left-40 animate-pulse-slow"></div>
+    <div class="blob -bottom-40 -right-40 animate-float"></div>
+
+    <nav class="fixed top-8 right-8 flex items-center gap-4 z-50">
+        <a href="/" class="super-glass p-4 rounded-2xl hover:scale-110 active:scale-95 transition-all text-brand-600 dark:text-brand-400">
+            <i class="fas fa-house-chimney text-lg"></i>
+        </a>
+        <button id="theme-toggle" class="super-glass p-4 rounded-2xl hover:scale-110 active:scale-95 transition-all text-brand-600 dark:text-yellow-400">
+            <i id="theme-icon" class="fas fa-moon text-lg"></i>
+        </button>
+    </nav>
+
+    <div class="container max-w-5xl z-10" data-aos="zoom-out">
+        <div class="grid lg:grid-cols-12 gap-10 items-center">
+            
+            <div class="hidden lg:block lg:col-span-5 space-y-8" data-aos="fade-right">
+                <div class="space-y-4">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-500/10 border border-brand-500/20">
+                        <span class="w-2 h-2 rounded-full bg-brand-500 animate-ping"></span>
+                        <span class="mono text-[10px] font-bold text-brand-600 dark:text-brand-400 tracking-widest uppercase">Guardian_Link_V2</span>
+                    </div>
+                    <h1 class="text-6xl font-black text-brand-900 dark:text-white leading-[0.9] tracking-tighter">
+                        Parent <br><span class="text-brand-600">Terminal.</span>
+                    </h1>
+                </div>
+                
+                <div class="super-glass p-6 rounded-[2rem] border-l-4 border-brand-600">
+                    <div class="flex gap-4">
+                        <i class="fas fa-shield-heart text-brand-600 text-2xl pt-1"></i>
+                        <div>
+                            <h4 class="font-bold text-brand-900 dark:text-slate-100">Secure Access</h4>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">View real-time academic progress, attendance records, and behavioral insights for your ward.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-7 flex justify-center lg:justify-end">
+                <div class="w-full max-w-[440px] super-glass rounded-[4rem] p-10 lg:p-14 relative overflow-hidden group">
+                    <div class="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-brand-500 to-transparent opacity-20 animate-scan"></div>
+
+                    <header class="text-center mb-10">
+                        <div class="w-20 h-20 bg-gradient-to-br from-brand-600 to-brand-400 rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-2xl shadow-brand-500/40 rotate-12 animate-float">
+                            <i class="fas fa-fingerprint text-white text-3xl -rotate-12"></i>
+                        </div>
+                        <h2 class="text-3xl font-black text-brand-900 dark:text-white uppercase italic tracking-tighter">Guardian Login</h2>
+                        <p class="mono text-[9px] text-brand-600 dark:text-brand-400 font-bold tracking-[0.3em] uppercase mt-2">Eduke_Intel_Security</p>
+                    </header>
+
+                    <form method="POST" class="space-y-6">
+                        {% csrf_token %}
+                        
+                        <div class="space-y-2 group">
+                            <label class="text-[10px] font-black text-brand-600 uppercase tracking-widest ml-4">Student Roll Number</label>
+                            <div class="relative">
+                                <input type="text" name="roll_no" required placeholder="ROLL-000-000" 
+                                    class="input-violet w-full py-5 px-8 rounded-[2rem] outline-none text-sm font-medium">
+                                <i class="fas fa-id-card absolute right-7 top-1/2 -translate-y-1/2 text-brand-400 opacity-40 group-focus-within:opacity-100 transition-opacity"></i>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2 group">
+                            <label class="text-[10px] font-black text-brand-600 uppercase tracking-widest ml-4">Security Key</label>
+                            <div class="relative">
+                                <input type="password" id="password" name="password" readonly 
+  onfocus="this.removeAttribute('readonly');"
+  autocomplete="off" required placeholder="••••••••" 
+                                    class="input-violet w-full py-5 px-8 rounded-[2rem] outline-none text-sm">
+                                <button type="button" onclick="togglePassword()" class="absolute right-7 top-1/2 -translate-y-1/2 text-brand-400 hover:text-brand-600 transition-colors">
+                                    <i id="eye-icon" class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-brand-600 dark:bg-white text-white dark:text-brand-900 font-black py-5 rounded-[2rem] shadow-xl shadow-brand-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 uppercase tracking-widest text-xs mt-4">
+                            <span>Enter Terminal</span>
+                            <i class="fas fa-bolt-lightning text-yellow-400"></i>
+                        </button>
+                    </form>
+
+                    {% if messages %}
+                        <div class="mt-6 space-y-2">
+                            {% for message in messages %}
+                            <div class="p-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 text-[10px] font-bold uppercase tracking-widest text-center">
+                                {{ message }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <footer class="mt-10 text-center">
+                        <a href="{% url 'forgot_password' user_type='parent' %}" class="text-[10px] font-bold text-slate-400 hover:text-brand-600 transition-colors uppercase tracking-[0.2em] underline decoration-brand-600/20 underline-offset-8">
+                            Recover Security Key?
+                        </a>
+                    </footer>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+    <script>
+        AOS.init({ duration: 1000, once: true });
+
+        // Theme Toggle Logic
+        const themeBtn = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const html = document.documentElement;
+
+        function updateTheme(isDark) {
+            if (isDark) {
+                html.classList.add('dark');
+                themeIcon.className = 'fas fa-sun';
+            } else {
+                html.classList.remove('dark');
+                themeIcon.className = 'fas fa-moon';
+            }
+        }
+
+        themeBtn.addEventListener('click', () => {
+            const isDark = !html.classList.contains('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            updateTheme(isDark);
+        });
+
+        // Load saved theme
+        updateTheme(localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches));
+
+        // Password visibility toggle
+        function togglePassword() {
+            const passInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eye-icon');
+            passInput.type = passInput.type === 'password' ? 'text' : 'password';
+            eyeIcon.className = passInput.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+        }
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-active, .active, a[class*="bg-brand-500/10"][class*="text-white"], a[class*="bg-accent-fuchsia/10"][class*="text-white"], a[class*="bg-indigo-500/10"][class*="text-white"], a[class*="bg-emerald-500/10"][class*="text-white"]');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+</html>

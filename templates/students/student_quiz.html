@@ -1,0 +1,680 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduke | Assessment Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+                        accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b', emerald: '#10b981' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        /* Scrollbar Styling */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #8b5cf633;
+            border-radius: 10px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #8b5cf666;
+        }
+    </style>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            transition: background-color 0.3s ease;
+        }
+
+        .dark body {
+            background-color: #020617;
+        }
+
+        #spotlight {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.15) 0%, transparent 45%);
+            z-index: 1;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.4;
+            z-index: 0;
+            animation: float 20s infinite alternate;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(100px, 50px);
+            }
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(25px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+        }
+
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-sidebar {
+            background: rgba(10, 10, 20, 0.98);
+            backdrop-filter: blur(40px);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .peer-checked {
+            color: #020617;
+        }
+
+        .nav-item-link {
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .nav-item-link.active {
+            color: #a78bfa !important;
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+        }
+
+        .nav-item-link.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 25%;
+            height: 50%;
+            width: 4px;
+            background: #d946ef;
+            box-shadow: 0 0 15px #d946ef;
+            border-radius: 0 4px 4px 0;
+        }
+
+
+        .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #8b5cf633;
+      border-radius: 10px;
+    }
+
+        @keyframes shimmer {
+            100% {
+                transform: translateX(100%);
+            }
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+    <div id="spotlight"></div>
+    <div class="orb w-96 h-96 bg-brand-500/10 top-0 left-0"></div>
+
+    <div class="relative z-10 flex h-screen overflow-hidden lg:p-6">
+
+        <aside id="sidebar"
+            class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-full">
+            <div
+                class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5 bg-[#0a0a14]/80 backdrop-blur-xl">
+
+                <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+                    <div class="flex items-center gap-3 group">
+                        <div
+                            class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 animate-pulse">
+                            <img src="{% static 'main/images/logobase_white.png' %}" class="w-6 h-6 object-contain">
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span
+                                    class="text-accent-fuchsia">.</span></h2>
+                            <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Student Portal
+                            </p>
+                        </div>
+                    </div>
+                    <button id="close-sidebar" class="lg:hidden text-slate-400 hover:text-white"><i
+                            class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+
+                <nav class="flex-grow px-4 space-y-4 overflow-y-auto custom-scroll py-2">
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Academic
+                        </p>
+                        <div class="space-y-1">
+                            <a href="{% url 'student_dashboard' %}"
+                                class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                                <i class="fa-solid fa-layer-group"></i><span class="font-bold text-sm">Dashboard</span>
+                            </a>
+                            <a href="{% url 'student_class' %}"
+                                class="nav-item-link active relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                                <i class="fa-solid fa-chalkboard"></i><span class="font-bold text-sm">Your Class</span>
+                            </a>
+                            <a href="{% url 'student_performance'%}"
+                                class="nav-item-link  relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                                <i class="fa-solid fa-chart-line"></i><span class="font-bold text-sm">Performance</span>
+                            </a>
+                            <a href="{% url 'student_view_attendance'%}"
+                                class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                                <i class="fa-solid fa-calendar-check"></i><span class="font-bold text-sm">View Attendance</span>
+                            </a>
+                            <div>
+                                <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">AI
+                                    Tools</p>
+                                <div class="space-y-1">
+                                    <a href="{% url 'student_prediction' %}"
+                                        class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_prediction' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                                        <i
+                                            class="fa-solid fa-fire-flame-curved text-base group-hover:text-brand-400 transition-colors"></i>
+                                        <span class="font-bold text-sm">Prediction</span>
+                                    </a>
+
+                                    <a href="{% url 'student_eduke_bot' %}"
+                                        class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_eduke_bot' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                                        <i
+                                            class="fa-solid fa-robot text-base group-hover:text-brand-400 transition-colors"></i>
+                                        <span class="font-bold text-sm">Eduke Bot</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="pt-2">
+                                <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">
+                                    Social</p>
+                                <div class="space-y-1">
+                                    <a href="{% url 'student_chat' %}"
+                                        class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_chat' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                                        <i
+                                            class="fa-solid fa-comments text-base group-hover:text-brand-400 transition-colors"></i>
+                                        <span class="font-bold text-sm">Eduke Chat</span>
+                                    </a>
+
+                                    <a href="{% url 'student_profile' %}"
+                                        class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_profile' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                                        <i
+                                            class="fa-solid fa-circle-user text-base group-hover:text-brand-400 transition-colors"></i>
+                                        <span class="font-bold text-sm">Profile</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+
+                <div class="p-4 mt-auto">
+                    <div
+                        class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 font-black text-white text-xs">
+                                {{ student_name|slice:":1"|upper }}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="text-[11px] font-black text-white truncate uppercase">{{ student_name }}</h4>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Student</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'logout' %}"
+                            class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 transition-all">
+                            <span
+                                class="text-[9px] font-black uppercase tracking-widest group-hover/btn:text-white">Logout</span>
+                            <i class="fa-solid fa-power-off text-[10px] group-hover/btn:text-white"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <header class="h-20 flex items-center justify-between px-8 shrink-0 relative z-20">
+                <div class="flex items-center gap-4">
+                    <a href="{% url 'student_subject_detail' subject.id %}"
+                        class="w-11 h-11 glass-card rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-brand-500 hover:scale-105 transition-all shadow-lg border border-white/20 dark:border-white/10"
+                        title="Go Back">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </a>
+
+                    <button id="hamburger-button"
+                        class="lg:hidden w-11 h-11 glass-card rounded-xl flex items-center justify-center text-brand-600 shadow-lg">
+                        <i class="fa-solid fa-bars-staggered"></i>
+                    </button>
+
+                    <h1 class="text-xl font-black dark:text-white uppercase tracking-tighter leading-none italic">
+                        Eduke <span class="text-brand-500">Node</span>
+                    </h1>
+                </div>
+
+                <button id="theme-switch"
+                    class="w-12 h-12 glass-card rounded-2xl flex items-center justify-center text-brand-600 dark:text-amber-400 hover:scale-110 transition-transform shadow-lg">
+                    <i id="theme-icon" class="fa-solid fa-moon"></i>
+                </button>
+            </header>
+
+            <div id="content-wrapper"
+                class="flex-1 overflow-y-auto px-4 lg:px-10 pb-12 space-y-10 custom-scroll relative z-10">
+
+                {% if quiz_attempted %}
+<div class="max-w-5xl mx-auto px-4 py-16 space-y-10 animate-in fade-in duration-1000">
+
+    <header class="relative p-1 rounded-[3rem] bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-900 shadow-2xl">
+        <div class="bg-slate-950/90 backdrop-blur-2xl rounded-[2.8rem] p-8 md:p-12 relative overflow-hidden">
+            <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 30px 30px;"></div>
+            
+            <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                <div class="space-y-4">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                        </span>
+                        <span class="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-300 italic">Data Stream Active</span>
+                    </div>
+                    
+                    <h1 class="text-5xl md:text-7xl font-black italic tracking-tighter text-white uppercase leading-none">
+                        {{ quiz_name }}
+                    </h1>
+                    
+                    <div class="flex flex-wrap gap-4 text-slate-400">
+                        <div class="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-xl border border-white/10">
+                            <i class="fa-solid fa-terminal text-indigo-400 text-xs"></i>
+                            <span class="font-mono text-xs uppercase tracking-widest">{{ subject.subject_name }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-center justify-center p-8 rounded-[2.5rem] bg-gradient-to-b from-white/10 to-transparent border border-white/10 min-w-[220px]">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-indigo-300 mb-2">Assigned Proctor</span>
+                    <span class="text-2xl font-black italic text-white text-center leading-tight">{{ subject.subject_head }}</span>
+                    <div class="mt-4 h-1 w-12 bg-indigo-500 rounded-full"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="grid gap-8">
+        {% for q in quiz_results %}
+        <article class="group relative animate-in fade-in slide-in-from-bottom-4 duration-700" data-animation-delay="{{ forloop.counter|add:'-1' }}">
+            <div class="absolute -inset-0.5 bg-gradient-to-r {% if q.is_correct %}from-emerald-500{% else %}from-rose-500{% endif %} to-transparent rounded-[3.5rem] opacity-0 group-hover:opacity-20 transition duration-500 blur"></div>
+            
+            <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[3rem] p-8 md:p-10 shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 overflow-hidden">
+                <!-- Animated Background Pattern -->
+                <div class="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none" style="background-image: repeating-linear-gradient(45deg, #8b5cf6 0px, #8b5cf6 1px, transparent 1px, transparent 8px);"></div>
+                
+                <!-- Top Border Accent -->
+                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r {% if q.is_correct %}from-emerald-500 via-emerald-500 to-teal-500{% else %}from-rose-500 via-rose-500 to-pink-500{% endif %} rounded-t-[3rem] opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-8">
+                        <span class="font-mono text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tighter">
+                            NODE_ENTRY_0{{ forloop.counter }}
+                        </span>
+                        <div class="h-px flex-1 ml-6 bg-gradient-to-r from-slate-200 dark:from-slate-800 to-transparent"></div>
+                        {% if q.is_correct %}
+                            <div class="flex items-center gap-2 text-emerald-500 font-black text-[10px] uppercase tracking-widest bg-emerald-500/10 px-4 py-1.5 rounded-full ml-4">
+                                <i class="fa-solid fa-check-double"></i> Verified
+                            </div>
+                        {% else %}
+                            <div class="flex items-center gap-2 text-rose-500 font-black text-[10px] uppercase tracking-widest bg-rose-500/10 px-4 py-1.5 rounded-full ml-4">
+                                <i class="fa-solid fa-xmark"></i> Conflict Detected
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <h2 class="text-2xl md:text-3xl font-extrabold text-slate-800 dark:text-white mb-10 leading-tight">
+                        {{ q.question }}
+                    </h2>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {% for opt_key, opt_text in q.options_list %}
+                        <div class="group/opt relative overflow-hidden p-6 rounded-[2.5rem] border-2 transition-all duration-500 transform hover:scale-[1.02]
+                            {% if opt_key == q.correct_option %}
+                                border-emerald-500 bg-emerald-50/50 dark:bg-emerald-500/5 text-emerald-900 dark:text-emerald-400
+                            {% elif opt_key == q.student_response and not q.is_correct %}
+                                border-rose-500 bg-rose-50/50 dark:bg-rose-500/5 text-rose-900 dark:text-rose-400
+                            {% else %}
+                                border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400
+                            {% endif %}">
+                            
+                            <div class="flex items-start gap-4">
+                                <b class="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl border-2 border-current/20 font-mono italic text-sm">
+                                    {{ opt_key }}
+                                </b>
+                                <div class="flex flex-col pt-1 flex-1">
+                                    <span class="font-bold text-lg leading-snug">{{ opt_text }}</span>
+                                    {% if opt_key == q.correct_option %}
+                                        <span class="text-[9px] uppercase tracking-widest mt-2 font-black opacity-60 italic">System Validated Response</span>
+                                    {% elif opt_key == q.student_response %}
+                                        <span class="text-[9px] uppercase tracking-widest mt-2 font-black opacity-60 italic">User Input Recorded</span>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if opt_key == q.correct_option %}
+                                    <i class="fa-solid fa-shield-check ml-auto text-xl opacity-40"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</div>
+
+                {% else %}
+                <form method="post" action="" class="max-w-5xl mx-auto px-4 py-16 space-y-10 animate-in fade-in duration-1000">
+                    {% csrf_token %}
+                    
+                    <header class="relative p-1 rounded-[3rem] bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-900 shadow-2xl">
+                        <div class="bg-slate-950/90 backdrop-blur-2xl rounded-[2.8rem] p-8 md:p-12 relative overflow-hidden">
+                            <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 30px 30px;"></div>
+                            
+                            <div class="relative z-10">
+                                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 mb-6">
+                                    <span class="relative flex h-2 w-2">
+                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                                    </span>
+                                    <span class="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-300 italic">Assessment Terminal Active</span>
+                                </div>
+                                
+                                <h1 class="text-5xl md:text-7xl font-black italic tracking-tighter text-white uppercase leading-none mb-4">
+                                    {{ quiz_name }}
+                                </h1>
+                                
+                                <div class="flex items-center gap-3 bg-white/5 px-5 py-3 rounded-xl border border-white/10 inline-flex">
+                                    <i class="fa-solid fa-terminal text-indigo-400 text-sm"></i>
+                                    <span class="font-mono text-sm uppercase tracking-widest text-slate-300">{{ subject.subject_name }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="grid gap-8">
+                        {% for question in quiz_questions %}
+                        <article class="group relative animate-in fade-in slide-in-from-bottom-4 duration-700" data-animation-delay="{{ forloop.counter|add:'-1' }}">
+                            <div class="absolute -inset-0.5 bg-gradient-to-r from-brand-500 to-indigo-500 to-transparent rounded-[3.5rem] opacity-0 group-hover:opacity-20 transition duration-500 blur"></div>
+                            
+                            <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[3rem] p-8 md:p-10 shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 overflow-hidden">
+                                <!-- Animated Background Pattern -->
+                                <div class="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none" style="background-image: repeating-linear-gradient(45deg, #8b5cf6 0px, #8b5cf6 1px, transparent 1px, transparent 8px);"></div>
+                                
+                                <!-- Top Border Accent -->
+                                <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-500 via-purple-500 to-indigo-500 rounded-t-[3rem] opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+                                <div class="relative z-10">
+                                    <div class="flex items-center justify-between mb-8">
+                                        <span class="font-mono text-xs font-bold text-slate-400 dark:text-slate-500 tracking-tighter">
+                                            NODE_ENTRY_0{{ forloop.counter }}
+                                        </span>
+                                        <div class="h-px flex-1 ml-6 bg-gradient-to-r from-slate-200 dark:from-slate-800 to-transparent"></div>
+                                    </div>
+
+                                    <h2 class="text-2xl md:text-3xl font-extrabold text-slate-800 dark:text-white mb-10 leading-tight">
+                                        {{ question.question }}
+                                    </h2>
+
+                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                        {% for val, label in question.options_list %}
+                                        <label class="group/opt relative cursor-pointer">
+                                            <input type="radio" name="question_{{ question.id }}" value="{{ val }}"
+                                                class="peer absolute opacity-0 w-full h-full cursor-pointer z-20" required>
+
+                                            <div class="w-full p-6 transition-all duration-500 ease-out flex items-center 
+                        bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-200 dark:border-slate-700 rounded-[2.5rem]
+                        peer-checked:border-brand-500 peer-checked:bg-brand-50 dark:peer-checked:bg-brand-900/20 peer-checked:shadow-xl peer-checked:shadow-brand-500/20
+                        peer-hover:border-brand-300 dark:peer-hover:border-brand-700 peer-hover:shadow-lg
+                        relative overflow-hidden transform hover:scale-[1.02] peer-checked:scale-[1.03]">
+
+                                                <!-- Animated Background Shine -->
+                                                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 dark:via-white/10 to-transparent -translate-x-full peer-checked:animate-[shimmer_2s_infinite]"></div>
+
+                                                <!-- Radio Button Indicator with Tick -->
+                                                <div class="relative flex items-center justify-center w-8 h-8 mr-5 shrink-0 z-10">
+                                                    <!-- Outer Circle -->
+                                                    <div class="absolute inset-0 rounded-full border-2 transition-all duration-500
+                            border-slate-300 dark:border-slate-600
+                            peer-checked:border-brand-500 peer-checked:bg-brand-500 dark:peer-checked:bg-brand-500
+                            peer-hover:border-brand-400 dark:peer-hover:border-brand-600
+                            shadow-sm peer-checked:shadow-lg peer-checked:shadow-brand-500/30"></div>
+                                                    <!-- Tick Mark Icon -->
+                                                    <i class="fa-solid fa-check text-slate-900 dark:text-white absolute z-10 transition-all duration-500" 
+                                                       style="opacity: 0; transform: scale(0) rotate(-45deg);" 
+                                                       data-checked-opacity="1" 
+                                                       data-checked-scale="1" 
+                                                       data-checked-rotate="0"></i>
+                                                </div>
+
+                                                <div class="flex flex-col flex-1 z-10">
+                                                    <span class="text-[9px] font-black tracking-[0.25em] mb-1.5 transition-all duration-500
+                             text-slate-400 dark:text-slate-500
+                             peer-checked:text-brand-600 dark:peer-checked:text-brand-400 uppercase">
+                                                        OPTION {{ val }}
+                                                    </span>
+                                                    <span class="text-base font-bold transition-all duration-500 leading-snug
+                             text-slate-700 dark:text-slate-200
+                             peer-checked:text-slate-900 dark:peer-checked:text-white">
+                                                        {{ label }}
+                                                    </span>
+                                                </div>
+
+                                                <!-- Status Indicator Dot -->
+                                                <div class="ml-3 w-2.5 h-2.5 rounded-full transition-all duration-500
+                             bg-slate-300 dark:bg-slate-600
+                             peer-checked:bg-brand-500 peer-checked:scale-125 peer-checked:animate-pulse shadow-sm peer-checked:shadow-lg peer-checked:shadow-brand-500/50"
+                                                ></div>
+                                            </div>
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                        {% endfor %}
+                    </div>
+
+                    <div class="flex justify-center pt-12 pb-8">
+                        <button type="submit"
+                            class="group relative px-32 py-7 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.5em] shadow-2xl hover:shadow-brand-500/50 transition-all duration-500 hover:-translate-y-2 active:scale-95 overflow-hidden border border-white/20">
+                            <span class="relative z-10">Commit Record</span>
+                            <div
+                                class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]">
+                            </div>
+                            <div class="absolute inset-0 bg-gradient-to-r from-brand-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl -z-10"></div>
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Success Message Toast -->
+    {% if messages %}
+    <div id="success-toast" class="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-500">
+        {% for message in messages %}
+        <div class="glass-card bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-5 rounded-[2rem] shadow-2xl border border-white/20 flex items-center gap-4 min-w-[400px]">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                <i class="fa-solid fa-check text-lg"></i>
+            </div>
+            <div class="flex-1">
+                <p class="font-bold text-sm tracking-wide">{{ message }}</p>
+            </div>
+            <button onclick="this.closest('#success-toast').remove()" class="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <script>
+        // Spotlight movement
+        document.addEventListener('mousemove', (e) => {
+            const spotlight = document.getElementById('spotlight');
+            spotlight.style.setProperty('--x', `${e.clientX}px`);
+            spotlight.style.setProperty('--y', `${e.clientY}px`);
+        });
+
+        // Theme Toggle
+        const themeBtn = document.getElementById('theme-switch');
+        const themeIcon = document.getElementById('theme-icon');
+        if (themeBtn && themeIcon) {
+            // Initialize theme icon based on current theme
+            if (document.documentElement.classList.contains('dark')) {
+                themeIcon.className = 'fa-solid fa-sun text-amber-400';
+            } else {
+                themeIcon.className = 'fa-solid fa-moon text-brand-600';
+            }
+            
+            themeBtn.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.theme = isDark ? 'dark' : 'light';
+                themeIcon.className = isDark ? 'fa-solid fa-sun text-amber-400' : 'fa-solid fa-moon text-brand-600';
+            });
+        }
+
+        // Responsive Sidebar
+        const hamburgerBtn = document.getElementById('hamburger-button');
+        if (hamburgerBtn) {
+            hamburgerBtn.addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('-translate-x-full');
+            });
+        }
+
+        // Enhanced Radio Button Selection with Tick Mark
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                // Remove check icons from all options in the same question group
+                const questionName = this.name;
+                document.querySelectorAll(`input[name="${questionName}"]`).forEach(otherRadio => {
+                    const labelDiv = otherRadio.closest('label');
+                    if (labelDiv) {
+                        const checkIcon = labelDiv.querySelector('.fa-check');
+                        if (checkIcon) {
+                            checkIcon.style.opacity = '0';
+                            checkIcon.style.transform = 'scale(0) rotate(-45deg)';
+                        }
+                    }
+                });
+
+                // Add check icon to selected option
+                if (this.checked) {
+                    const labelDiv = this.closest('label');
+                    if (labelDiv) {
+                        const checkIcon = labelDiv.querySelector('.fa-check');
+                        if (checkIcon) {
+                            setTimeout(() => {
+                                checkIcon.style.opacity = '1';
+                                checkIcon.style.transform = 'scale(1) rotate(0deg)';
+                            }, 50);
+                        }
+                    }
+                }
+            });
+
+            // Initialize state on page load
+            if (radio.checked) {
+                const labelDiv = radio.closest('label');
+                if (labelDiv) {
+                    const checkIcon = labelDiv.querySelector('.fa-check');
+                    if (checkIcon) {
+                        checkIcon.style.opacity = '1';
+                        checkIcon.style.transform = 'scale(1) rotate(0deg)';
+                    }
+                }
+            }
+        });
+
+        // Staggered Animation for Question Cards
+        document.querySelectorAll('[data-animation-delay]').forEach((element, index) => {
+            const delay = parseInt(element.getAttribute('data-animation-delay')) * 100;
+            element.style.animationDelay = `${delay}ms`;
+        });
+
+        // Auto-hide success toast after 3 seconds
+        setTimeout(() => {
+            const toast = document.getElementById('success-toast');
+            if (toast) {
+                toast.classList.add('animate-out', 'fade-out', 'slide-out-to-top-4', 'duration-700');
+                setTimeout(() => toast.remove(), 700);
+            }
+        }, 3000);
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-link.active');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+
+</html>

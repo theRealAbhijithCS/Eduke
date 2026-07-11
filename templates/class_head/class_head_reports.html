@@ -1,0 +1,1188 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduke | Class Reports</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+                        accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.01em; overflow: hidden; }
+        
+        #spotlight {
+            position: fixed; inset: 0; pointer-events: none;
+            background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.12) 0%, transparent 40%);
+            z-index: 1;
+        }
+        
+        .glass-sidebar {
+            background: rgba(10, 10, 20, 0.98);
+            backdrop-filter: blur(30px);
+            border-right: 1px solid rgba(139, 92, 246, 0.1);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #8b5cf633; border-radius: 10px; }
+        
+        .dark input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+        
+        .table-row-animate { animation: fadeIn 0.5s ease forwards; opacity: 0; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .report-card:hover { transform: translateY(-5px); }
+        .report-card { transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); }
+        
+        /* Print Styles */
+        @media print {
+            /* Reset the base layout */
+            html, body { 
+                overflow: visible !important; 
+                height: auto !important; 
+                background: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            /* Hide all UI elements except the report content */
+            #sidebar, #spotlight, #hamburger-button, #theme-switch, 
+            .lg\:p-6, button:not(.print-button) { 
+                display: none !important; 
+            }
+
+            /* Show print header */
+            .print-header { 
+                display: block !important; 
+                text-align: center; 
+                margin-bottom: 2rem;
+                padding: 20px;
+                border-bottom: 2px solid #e2e8f0;
+            }
+            
+            .print-report-title {
+                font-size: 24px;
+                font-weight: 900;
+                color: #000;
+                margin-bottom: 10px;
+                text-transform: uppercase;
+            }
+            
+            .print-date-info {
+                font-size: 14px;
+                color: #333;
+                margin: 3px 0;
+            }
+
+            /* Hide main header */
+            header:not(.print-header) { 
+                display: none !important; 
+            }
+            
+            /* Hide performance reports section during print */
+            .performance-reports-section {
+                display: none !important;
+            }
+
+            /* Force main containers to display properly */
+            .relative.z-10.flex, main, .flex-1 {
+                display: block !important;
+                overflow: visible !important;
+                position: static !important;
+            }
+
+            /* Ensure scroll area is visible */
+            .flex-1.overflow-y-auto {
+                overflow: visible !important;
+                display: block !important;
+                height: auto !important;
+                max-height: none !important;
+            }
+
+            /* Report card styling for print */
+            .glass-card { 
+                border: 1px solid #e2e8f0 !important; 
+                background: white !important; 
+                box-shadow: none !important;
+                overflow: visible !important;
+                margin-bottom: 20px;
+                padding: 20px !important;
+                break-inside: avoid;
+            }
+
+            /* Hide screen table during print */
+            .screen-table {
+                display: none !important;
+            }
+            
+            /* Show print table during print */
+            div.print-table {
+                display: block !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 20px 0 !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
+            
+            /* Additional print table styling */
+            @media print {
+                div.print-table {
+                    display: table !important;
+                    width: 100% !important;
+                }
+                
+                /* Show print students list during print */
+                .print-students-list {
+                    display: block !important;
+                    width: 100% !important;
+                    margin: 20px 0 !important;
+                    padding: 10px 0 !important;
+                }
+                
+                .print-students-table {
+                    width: 95% !important;
+                    border-collapse: collapse !important;
+                    font-size: 12px;
+                    margin: 10px 0;
+                    break-inside: auto;
+                    display: table !important;
+                    border: 1px solid #000 !important;
+                }
+                
+                .print-students-table th,
+                .print-students-table td {
+                    border: 1px solid #000 !important;
+                    padding: 6px 4px !important;
+                    text-align: left;
+                    color: #000 !important;
+                    background-color: white !important;
+                    display: table-cell !important;
+                }
+                
+                .print-students-table th {
+                    background-color: #f1f5f9 !important;
+                    font-weight: 900 !important;
+                    text-transform: uppercase;
+                    font-size: 10px;
+                }
+                
+                .print-students-table td {
+                    font-size: 11px;
+                    vertical-align: top;
+                }
+                
+                .print-student-list-title {
+                    font-size: 16px;
+                    font-weight: 900;
+                    color: #000;
+                    margin: 15px 0 10px 0;
+                }
+                
+                /* Print Students Table Styles */
+                .print-students-table {
+                    width: 95% !important;
+                    border-collapse: collapse !important;
+                    font-size: 12px;
+                    margin: 10px 0;
+                    break-inside: auto;
+                    display: table !important;
+                    border: 1px solid #000 !important;
+                }
+                
+                .print-students-table th,
+                .print-students-table td {
+                    border: 1px solid #000 !important;
+                    padding: 6px 4px !important;
+                    text-align: left;
+                    color: #000 !important;
+                    background-color: white !important;
+                    display: table-cell !important;
+                }
+                
+                .print-students-table th {
+                    background-color: #f1f5f9 !important;
+                    font-weight: 900 !important;
+                    text-transform: uppercase;
+                    font-size: 10px;
+                }
+                
+                .print-students-table td {
+                    font-size: 11px;
+                    vertical-align: top;
+                }
+            }
+            
+            .print-attendance-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 12px;
+                margin: 20px 0;
+                break-inside: auto;
+                display: table !important;
+                border: 1px solid #000 !important;
+            }
+            
+            .print-attendance-table th,
+            .print-attendance-table td {
+                border: 1px solid #000 !important;
+                padding: 8px 6px !important;
+                text-align: left;
+                color: #000 !important;
+                background-color: white !important;
+                display: table-cell !important;
+            }
+            
+            .print-attendance-table th {
+                background-color: #f1f5f9 !important;
+                font-weight: 900 !important;
+                text-transform: uppercase;
+                font-size: 11px;
+            }
+            
+            .print-attendance-table td {
+                font-size: 12px;
+                vertical-align: top;
+            }
+            
+            /* Print Quiz Table Styles */
+            .print-quiz-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 12px;
+                margin: 20px 0;
+                break-inside: auto;
+                display: table !important;
+                border: 1px solid #000 !important;
+            }
+            
+            .print-quiz-table th,
+            .print-quiz-table td {
+                border: 1px solid #000 !important;
+                padding: 8px 6px !important;
+                text-align: left;
+                color: #000 !important;
+                background-color: white !important;
+                display: table-cell !important;
+            }
+            
+            .print-quiz-table th {
+                background-color: #f1f5f9 !important;
+                font-weight: 900 !important;
+                text-transform: uppercase;
+                font-size: 11px;
+            }
+            
+            .print-quiz-table td {
+                font-size: 12px;
+                vertical-align: top;
+            }
+            
+            /* Print Marks Table Styles */
+            .print-marks-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 12px;
+                margin: 20px 0;
+                break-inside: auto;
+                display: table !important;
+                border: 1px solid #000 !important;
+            }
+            
+            .print-marks-table th,
+            .print-marks-table td {
+                border: 1px solid #000 !important;
+                padding: 8px 6px !important;
+                text-align: left;
+                color: #000 !important;
+                background-color: white !important;
+                display: table-cell !important;
+            }
+            
+            .print-marks-table th {
+                background-color: #f1f5f9 !important;
+                font-weight: 900 !important;
+                text-transform: uppercase;
+                font-size: 11px;
+            }
+            
+            .print-marks-table td {
+                font-size: 12px;
+                vertical-align: top;
+            }
+
+            /* Force text colors for visibility */
+            .text-slate-800, .text-slate-700, .dark\:text-white,
+            .text-emerald-600, .text-amber-600, .text-rose-600,
+            .text-slate-600, .text-slate-500, .text-slate-400,
+            .text-indigo-600 {
+                color: #000 !important;
+            }
+            
+            /* Status badges styling */
+            .inline-flex {
+                display: inline-block !important;
+                background: none !important;
+                border: 1px solid #000 !important;
+                padding: 2px 6px !important;
+                font-size: 10px !important;
+                font-weight: 900 !important;
+            }
+            
+            .fa-solid {
+                display: none !important;
+            }
+            
+            /* Section headers */
+            h3 {
+                color: #000 !important;
+                margin-top: 20px !important;
+                margin-bottom: 15px !important;
+                font-size: 18px !important;
+            }
+            
+            /* Info text */
+            .text-sm, .text-xs {
+                color: #000 !important;
+            }
+        }
+        
+        .print-header { display: none; }
+        .hidden { display: none; }
+        
+        /* Hide print table on screen */
+        .print-table {
+            display: none;
+        }
+        
+        /* Hide print students list on screen */
+        .print-students-list {
+            display: none;
+        }
+        
+        /* Show screen table on screen */
+        .screen-table {
+            display: block;
+        }
+    </style>
+</head>
+
+<body class="bg-[#f8fafc] dark:bg-[#020617] antialiased">
+    <div id="spotlight"></div>
+
+    <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+        
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 h-[100dvh] lg:h-full">
+            <div class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden">
+                
+                <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+                    <div class="flex items-center gap-3 group cursor-pointer">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 dark:border-white/10 bg-white/10 dark:bg-white/5 group-hover:rotate-12 transition-transform animate-pulse bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 bg-[length:200%_200%]">
+                            <img src="{% static 'main/images/logobase_white.png' %}" class="w-6 h-6 object-contain">
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span class="text-accent-fuchsia">.</span></h2>
+                            <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Command</p>
+                        </div>
+                    </div>
+                    <button id="close-sidebar" class="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white transition-all">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <nav class="flex-grow px-4 space-y-4 overflow-y-auto custom-scroll py-2">
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Navigation</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'class_head_dashboard' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_dashboard' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %}">
+                                {% if request.resolver_match.url_name == 'class_head_dashboard' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-layer-group {% if request.resolver_match.url_name == 'class_head_dashboard' %}text-brand-400{% else %}group-hover:text-brand-400{% endif %}"></i>
+                                <span class="font-bold text-sm">Dashboard</span>
+                            </a>
+                            <a href="{% url 'class_head_class' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_class' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %} group">
+                                {% if request.resolver_match.url_name == 'class_head_class' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-chalkboard {% if request.resolver_match.url_name == 'class_head_class' %}text-brand-400{% else %}group-hover:text-brand-400{% endif %} transition-colors"></i>
+                                <span class="font-bold text-sm">Your Class</span>
+                            </a>
+                            <a href="{% url 'class_head_students' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_students' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %} group">
+                                {% if request.resolver_match.url_name == 'class_head_students' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-user-group {% if request.resolver_match.url_name == 'class_head_students' %}text-accent-fuchsia{% else %}group-hover:text-accent-fuchsia{% endif %} transition-colors"></i>
+                                <span class="font-bold text-sm">Students</span>
+                            </a>
+                            <a href="{% url 'class_head_reports' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_reports' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %} group">
+                                {% if request.resolver_match.url_name == 'class_head_reports' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-chart-bar {% if request.resolver_match.url_name == 'class_head_reports' %}text-emerald-400{% else %}group-hover:text-emerald-400{% endif %} transition-colors"></i>
+                                <span class="font-bold text-sm">Reports</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Communication</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'class_head_chat' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_chat' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %} group">
+                                {% if request.resolver_match.url_name == 'class_head_chat' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-comments {% if request.resolver_match.url_name == 'class_head_chat' %}text-indigo-400{% else %}group-hover:text-indigo-400{% endif %} transition-colors"></i>
+                                <span class="font-bold text-sm">Eduke Chat</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">User</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'class_head_profile' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 {% if request.resolver_match.url_name == 'class_head_profile' %}bg-brand-500/10 border border-brand-500/20 text-white !important nav-item-link active{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %} group">
+                                {% if request.resolver_match.url_name == 'class_head_profile' %}<span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>{% endif %}
+                                <i class="fa-solid fa-circle-user text-base {% if request.resolver_match.url_name == 'class_head_profile' %}text-brand-400{% else %}group-hover:text-brand-400{% endif %}"></i>
+                                <span class="font-bold text-sm">Profile </span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+
+                <div class="p-4 shrink-0 mt-auto mb-2 lg:mb-4">
+                    <div class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3 transition-all hover:border-white/20">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 font-black text-white text-xs">
+                                {{ class_head_name|slice:":1" }}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="text-[11px] font-black text-white truncate uppercase">{{ class_head_name }}</h4>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none">Class Head</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'logout' %}" class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 transition-all duration-300">
+                            <span class="text-[9px] font-black uppercase tracking-widest group-hover/btn:text-white">Logout</span>
+                            <i class="fa-solid fa-power-off text-[10px] group-hover/btn:text-white transition-colors"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <header class="h-20 flex items-center justify-between px-8 shrink-0">
+                <div class="flex items-center gap-4">
+                    <button id="hamburger-button" class="lg:hidden w-11 h-11 flex items-center justify-center rounded-xl glass-card text-brand-600">
+                        <i class="fas fa-bars-staggered text-xl"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-xl font-black dark:text-white uppercase tracking-tighter">Class <span class="text-brand-500">Reports</span></h1>
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mt-1">Performance Analytics & Data Insights</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    {% include 'class_head/_notification_bell.html' %}
+                    
+                    <button onclick="window.print()" class="w-11 h-11 rounded-2xl glass-card flex items-center justify-center text-emerald-600 hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-print"></i>
+                    </button>
+                    <button id="theme-switch" class="w-11 h-11 rounded-2xl glass-card flex items-center justify-center text-brand-600 dark:text-amber-400 hover:scale-110 transition-transform">
+                        <i id="theme-icon" class="fa-solid fa-moon"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Hidden Print Header -->
+            <div id="print-header" class="print-header">
+                <h1 class="print-report-title">
+                    {% if report_type == 'attendance' %}
+                        Class Attendance Report
+                    {% elif report_type == 'quiz' %}
+                        Class Quiz Performance Report
+                    {% elif report_type == 'marks' %}
+                        Class Internal Marks Report
+                    {% else %}
+                        Class Reports
+                    {% endif %}
+                </h1>
+                {% if report_type == 'attendance' %}
+                    <p class="print-date-info">Selected Date: <span id="print-selected-date">{{ selected_date|default:today_date }}</span></p>
+                {% endif %}
+                <p class="print-date-info">Class: {{ class_head.class_name }}</p>
+                <p class="print-date-info">Institution: {{ institution_name }}</p>
+                <p class="print-date-info">Generated on: {% now "F j, Y" %}</p>
+                <hr style="margin: 15px 0;">
+            </div>
+            
+            <!-- Print Students List -->
+            <div class="print-students-list">
+                <h3 class="print-student-list-title">
+                    {% if report_type == 'attendance' %}
+                        Attendance Report
+                    {% elif report_type == 'quiz' %}
+                        Quiz Performance Report
+                    {% elif report_type == 'marks' %}
+                        Internal Marks Report
+                    {% else %}
+                        Student Report
+                    {% endif %}
+                </h3>
+                <table class="print-students-table">
+                    <thead>
+                        <tr>
+                            {% if report_type == 'attendance' %}
+                                <th>Roll No</th>
+                                <th>Student Name</th>
+                                <th>Present</th>
+                                <th>Total</th>
+                                <th>Percentage</th>
+                                <th>Status</th>
+                            {% elif report_type == 'quiz' %}
+                                <th>Roll No</th>
+                                <th>Student Name</th>
+                                <th>Total Attended</th>
+                                <th>Overall Percentage</th>
+                                <th>Performance</th>
+                            {% elif report_type == 'marks' %}
+                                <th>Roll No</th>
+                                <th>Student Name</th>
+                                {% for subject in subjects %}
+                                <th>{{ subject.subject_name }}</th>
+                                {% endfor %}
+                                <th>Total</th>
+                                <th>Average</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if report_type == 'attendance' %}
+                            {% for student in attendance_data %}
+                            <tr>
+                                <td>{{ student.roll_no }}</td>
+                                <td>{{ student.name }}</td>
+                                <td>{{ student.present_count }}</td>
+                                <td>{{ student.total_count }}</td>
+                                <td>{{ student.percentage }}%</td>
+                                <td>
+                                    {% if student.percentage >= 75 %}
+                                        Good
+                                    {% elif student.percentage >= 50 %}
+                                        Warning
+                                    {% else %}
+                                        Critical
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% elif report_type == 'quiz' %}
+                            {% for quiz in quiz_data %}
+                            <tr>
+                                <td>{{ quiz.roll_no }}</td>
+                                <td>{{ quiz.student_name }}</td>
+                                <td>{{ quiz.attended_quizzes }}/{{ quiz.total_class_quizzes }}</td>
+                                <td>{{ quiz.overall_percentage }}%</td>
+                                <td>
+                                    {% if quiz.overall_percentage >= 80 %}
+                                        Excellent
+                                    {% elif quiz.overall_percentage >= 60 %}
+                                        Good
+                                    {% else %}
+                                        Needs Work
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% elif report_type == 'marks' %}
+                            {% for student_marks in marks_data %}
+                            <tr>
+                                <td>{{ student_marks.roll_no }}</td>
+                                <td>{{ student_marks.name }}</td>
+                                {% for subject in student_marks.subjects %}
+                                <td>{{ subject.internal_marks }}/{{ subject.max_marks }}</td>
+                                {% endfor %}
+                                <td>{{ student_marks.total_obtained }}/{{ total_possible_marks }}</td>
+                                <td>{{ student_marks.average }}%</td>
+                            </tr>
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-4 lg:px-8 pb-10 space-y-8 custom-scroll">
+                
+                <section class="performance-reports-section p-8 rounded-[2.5rem] bg-gradient-to-br from-brand-600 to-indigo-700 text-white shadow-xl relative overflow-hidden">
+                    <div class="relative z-10">
+                        <h2 class="text-3xl font-black uppercase italic tracking-tighter">Performance Reports</h2>
+                        <p class="text-brand-100 font-bold opacity-80 uppercase text-[10px] tracking-widest mt-1">
+                            {{ class_head.class_name }} - {{ institution_name }}
+                        </p>
+                    </div>
+                    <i class="fa-solid fa-chart-pie absolute -right-4 -bottom-4 text-9xl opacity-10"></i>
+                </section>
+
+                <!-- Report Type Navigation Tabs -->
+                <div class="flex justify-center w-full my-8">
+    <div class="inline-flex items-center p-1.5 bg-slate-100/80 dark:bg-white/5 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-[1.5rem] shadow-inner">
+        <div class="flex flex-wrap justify-center gap-1">
+            
+            <a href="?type=attendance" 
+               class="relative flex items-center px-6 py-3 rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 group
+               {% if report_type == 'attendance' %}
+                bg-white dark:bg-emerald-500 text-emerald-600 dark:text-white shadow-sm dark:shadow-lg dark:shadow-emerald-500/20
+               {% else %}
+                text-slate-500 dark:text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400
+               {% endif %}">
+                <i class="fa-solid fa-calendar-check mr-2 text-xs {% if report_type == 'attendance' %}text-emerald-500 dark:text-white{% endif %}"></i>
+                Attendance
+            </a>
+
+            <a href="?type=quiz" 
+               class="relative flex items-center px-6 py-3 rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 group
+               {% if report_type == 'quiz' %}
+                bg-white dark:bg-indigo-500 text-indigo-600 dark:text-white shadow-sm dark:shadow-lg dark:shadow-indigo-500/20
+               {% else %}
+                text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400
+               {% endif %}">
+                <i class="fa-solid fa-file-circle-question mr-2 text-xs {% if report_type == 'quiz' %}text-indigo-500 dark:text-white{% endif %}"></i>
+                Quiz Results
+            </a>
+
+            <a href="?type=marks" 
+               class="relative flex items-center px-6 py-3 rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest transition-all duration-300 group
+               {% if report_type == 'marks' %}
+                bg-white dark:bg-amber-500 text-amber-600 dark:text-white shadow-sm dark:shadow-lg dark:shadow-amber-500/20
+               {% else %}
+                text-slate-500 dark:text-slate-400 hover:text-amber-500 dark:hover:text-amber-400
+               {% endif %}">
+                <i class="fa-solid fa-chart-line mr-2 text-xs {% if report_type == 'marks' %}text-amber-500 dark:text-white{% endif %}"></i>
+                Internal Marks
+            </a>
+            
+        </div>
+    </div>
+</div>
+
+                <!-- Report Content -->
+                <div class="glass-card rounded-[3rem] p-8 shadow-xl">
+                    {% if report_type == 'attendance' %}
+                        <!-- Attendance Report -->
+                        <div class="space-y-6 mb-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 p-1">
+        
+        <div>
+            <h3 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
+                <span class="h-8 w-1.5 rounded-full bg-brand-500"></span>
+                Attendance Overview
+            </h3>
+            <p class="text-xs font-medium text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-widest">
+                Generated on: <span class="text-slate-600 dark:text-slate-300">{% now "F j, Y" %}</span>
+            </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4">
+            <div class="flex items-center gap-2 bg-slate-100/50 dark:bg-white/5 p-1.5 rounded-2xl border border-slate-200 dark:border-white/10">
+                <div class="relative">
+                    <i class="fa-solid fa-calendar text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 text-xs pointer-events-none"></i>
+                    <input type="date" 
+                           id="attendance-date" 
+                           name="attendance_date" 
+                           value="{{ selected_date|default:today_date }}" 
+                           onchange="applyDateFilter()"
+                           class="pl-9 pr-3 py-2 rounded-xl border-none bg-white dark:bg-slate-800 text-slate-700 dark:text-white text-sm shadow-sm focus:ring-2 focus:ring-brand-500 transition-all outline-none cursor-pointer">
+                </div>
+            </div>
+
+            <div class="hidden sm:flex items-center gap-4 border-l border-slate-200 dark:border-white/10 pl-4">
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Students</div>
+                    <div class="text-lg font-black text-slate-800 dark:text-white leading-none">{{ students.count }}</div>
+                </div>
+                <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
+                    <i class="fa-solid fa-users text-sm"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+                            
+
+                            <!-- Original table for screen display -->
+                            <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-separate border-spacing-0">
+            <thead>
+                <tr class="bg-slate-50/50 dark:bg-white/5">
+                    <th class="sticky top-0 border-b border-slate-200 dark:border-white/10 py-4 px-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Student Info
+                    </th>
+                    <th class="sticky top-0 border-b border-slate-200 dark:border-white/10 py-4 px-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">
+                        Attendance
+                    </th>
+                    <th class="sticky top-0 border-b border-slate-200 dark:border-white/10 py-4 px-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">
+                        Progress
+                    </th>
+                    <th class="sticky top-0 border-b border-slate-200 dark:border-white/10 py-4 px-6 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">
+                        Status
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-white/5">
+                {% for student in attendance_data %}
+                <tr class="group hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-all">
+                    <td class="py-4 px-6">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[12px] font-bold text-slate-600 dark:bg-white/10 dark:text-slate-400">
+                                {{ student.name|slice:2 | upper }}
+                            </div>
+                            <div>
+                                <div class="text-sm font-semibold text-slate-900 dark:text-white leading-none mb-1">
+                                    {{ student.name }}
+                                </div>
+                                <div class="text-[11px] font-mono text-slate-500 uppercase tracking-tight">
+                                    ID: {{ student.roll_no }}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td class="py-4 px-6 text-center">
+                        <div class="inline-flex flex-col">
+                            <span class="text-sm font-bold text-slate-700 dark:text-slate-200">
+                                {{ student.present_count }} <span class="text-slate-400 font-normal">/ {{ student.total_count }}</span>
+                            </span>
+                            <span class="text-[10px] text-slate-400 uppercase font-medium">Classes</span>
+                        </div>
+                    </td>
+
+                    <td class="py-4 px-6">
+                        <div class="flex flex-col items-center min-w-[100px]">
+                            <span class="text-sm font-black mb-1.5 {% if student.percentage >= 75 %}text-emerald-600{% elif student.percentage >= 50 %}text-amber-600{% else %}text-rose-600{% endif %}">
+                                {{ student.percentage }}%
+                            </span>
+                            <div class="h-1.5 w-full max-w-[80px] rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
+                                <div class="h-full transition-all duration-500 {% if student.percentage >= 75 %}bg-emerald-500{% elif student.percentage >= 50 %}bg-amber-500{% else %}bg-rose-500{% endif %}" 
+                                     style="width: {{ student.percentage }}%">
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td class="py-4 px-6 text-right">
+                        {% if student.percentage >= 75 %}
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 text-[10px] font-bold border border-emerald-200/50 dark:border-emerald-500/20">
+                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> GOOD
+                        </span>
+                        {% elif student.percentage >= 50 %}
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 text-[10px] font-bold border border-amber-200/50 dark:border-amber-500/20">
+                            <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span> WARNING
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 text-[10px] font-bold border border-rose-200/50 dark:border-rose-500/20">
+                            <i class="fa-solid fa-triangle-exclamation text-[8px]"></i> CRITICAL
+                        </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+                            <!-- Print-optimized table (hidden on screen, visible during print) -->
+                            <div class="print-table">
+                                <table class="print-attendance-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Roll No</th>
+                                            <th>Student Name</th>
+                                            <th>Present</th>
+                                            <th>Total</th>
+                                            <th>Percentage</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for student in attendance_data %}
+                                        <tr>
+                                            <td>{{ student.roll_no }}</td>
+                                            <td>{{ student.name }}</td>
+                                            <td>{{ student.present_count }}</td>
+                                            <td>{{ student.total_count }}</td>
+                                            <td>{{ student.percentage }}%</td>
+                                            <td>
+                                                {% if student.percentage >= 75 %}
+                                                    Good
+                                                {% elif student.percentage >= 50 %}
+                                                    Warning
+                                                {% else %}
+                                                    Critical
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    {% elif report_type == 'quiz' %}
+                        <!-- Quiz Report -->
+                        <div class="space-y-6">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-1">
+        <div>
+            <h3 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
+                <i class="fa-solid fa-graduation-cap text-brand-500"></i>
+                Quiz Performance
+            </h3>
+            <p class="text-xs text-slate-400 dark:text-slate-500 font-medium uppercase tracking-widest mt-1">
+                Academic Report • {% now "F j, Y" %}
+            </p>
+        </div>
+
+        <div class="flex items-center gap-3 bg-slate-100 dark:bg-white/5 px-4 py-2 rounded-2xl border border-slate-200 dark:border-white/10">
+            <div class="flex -space-x-2">
+                <div class="w-7 h-7 rounded-full border-2 border-white dark:border-slate-900 bg-emerald-500"></div>
+                <div class="w-7 h-7 rounded-full border-2 border-white dark:border-slate-900 bg-amber-500"></div>
+                <div class="w-7 h-7 rounded-full border-2 border-white dark:border-slate-900 bg-slate-300"></div>
+            </div>
+            <div class="text-sm font-bold text-slate-700 dark:text-slate-300">
+                {{ quiz_data|length }} <span class="text-xs font-normal text-slate-400">Enrolled Students</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
+                        <th class="py-4 px-6 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Student Details</th>
+                        <th class="py-4 px-6 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Quiz Engagement</th>
+                        <th class="py-4 px-6 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Success Rate</th>
+                        <th class="py-4 px-6 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">Performance Rank</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-white/5">
+                    {% for quiz in quiz_data %}
+                    <tr class="group hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors">
+                        <td class="py-4 px-6">
+                            <div class="flex items-center gap-4">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-white/10 dark:to-white/5 text-[13px] font-black text-slate-700 dark:text-slate-300">
+                                    {{ quiz.student_name|slice:2 | upper }}
+                                </div>
+                                <div>
+                                    <div class="text-sm font-bold text-slate-900 dark:text-white leading-none mb-1 group-hover:text-brand-500 transition-colors">
+                                        {{ quiz.student_name }}
+                                    </div>
+                                    <div class="text-[11px] font-mono text-slate-400 uppercase tracking-tighter">
+                                        Roll: {{ quiz.roll_no }}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td class="py-4 px-6 text-center">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-md bg-slate-100 dark:bg-white/5 text-xs font-bold text-slate-600 dark:text-slate-400">
+                                {{ quiz.attended_quizzes }} / {{ quiz.total_class_quizzes }}
+                            </span>
+                        </td>
+
+                        <td class="py-4 px-6">
+                            <div class="flex flex-col items-center gap-1.5">
+                                <span class="text-sm font-black {% if quiz.overall_percentage >= 80 %}text-emerald-600{% elif quiz.overall_percentage >= 60 %}text-amber-600{% else %}text-rose-600{% endif %}">
+                                    {{ quiz.overall_percentage }}%
+                                </span>
+                                <div class="h-1 w-16 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
+                                    <div class="h-full {% if quiz.overall_percentage >= 80 %}bg-emerald-500{% elif quiz.overall_percentage >= 60 %}bg-amber-500{% else %}bg-rose-500{% endif %}" 
+                                         style="width: {{ quiz.overall_percentage }}%"></div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td class="py-4 px-6 text-right">
+                            {% if quiz.overall_percentage >= 80 %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-tight border border-emerald-500/20">
+                                <i class="fa-solid fa-crown"></i> Excellent
+                            </span>
+                            {% elif quiz.overall_percentage >= 60 %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-tight border border-amber-500/20">
+                                <i class="fa-solid fa-circle-check"></i> Good
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-tight border border-rose-500/20">
+                                <i class="fa-solid fa-circle-exclamation"></i> Below Avg
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+                            <!-- Print-optimized table (hidden on screen, visible during print) -->
+                            <div class="print-table">
+                                <table class="print-quiz-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Roll No</th>
+                                            <th>Student Name</th>
+                                            <th>Total Attended</th>
+                                            <th>Overall Percentage</th>
+                                            <th>Performance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for quiz in quiz_data %}
+                                        <tr>
+                                            <td>{{ quiz.roll_no }}</td>
+                                            <td>{{ quiz.student_name }}</td>
+                                            <td>{{ quiz.attended_quizzes }}/{{ quiz.total_class_quizzes }}</td>
+                                            <td>{{ quiz.overall_percentage }}%</td>
+                                            <td>
+                                                {% if quiz.overall_percentage >= 80 %}
+                                                    Excellent
+                                                {% elif quiz.overall_percentage >= 60 %}
+                                                    Good
+                                                {% else %}
+                                                    Needs Work
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    {% elif report_type == 'marks' %}
+                        <!-- Internal Marks Report -->
+                        <div class="space-y-6">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-1">
+        <div>
+            <h3 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
+                <i class="fa-solid fa-file-invoice text-indigo-500"></i>
+                Internal Marks Report
+            </h3>
+            <p class="text-xs text-slate-400 dark:text-slate-500 font-medium uppercase tracking-widest mt-1">
+                Academic Session 2025-26 • <span class="text-indigo-600 dark:text-indigo-400">Final Internals</span>
+            </p>
+        </div>
+
+        <div class="flex items-center gap-4">
+    <div class="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-white/10">
+        <div class="text-right hidden sm:block">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
+                Student Count
+            </p>
+            <p class="text-xl font-black text-slate-800 dark:text-white leading-none">
+                {{ marks_data|length }}
+            </p>
+        </div>
+        
+        <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 shadow-sm border border-indigo-100 dark:border-indigo-500/20">
+            <i class="fa-solid fa-users-viewfinder text-sm"></i>
+        </div>
+    </div>
+
+   
+</div>
+    </div>
+
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
+                        <th class="sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 py-4 px-6 text-[10px] font-black text-slate-500 uppercase tracking-wider">Student Details</th>
+                        {% for subject in subjects %}
+                        <th class="py-4 px-4 text-[10px] font-black text-slate-500 uppercase tracking-wider text-center border-l border-slate-100 dark:border-white/5">
+                            {{ subject.subject_name }}
+                        </th>
+                        {% endfor %}
+                        <th class="py-4 px-6 text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider text-center bg-indigo-50/30 dark:bg-indigo-500/5">Grand Total</th>
+                        <th class="py-4 px-6 text-[10px] font-black text-slate-500 uppercase tracking-wider text-center">Avg %</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-white/5">
+                    {% for student_marks in marks_data %}
+                    <tr class="group hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors">
+                        <td class="sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 py-4 px-6 border-r border-slate-100 dark:border-white/5">
+                            <div class="flex items-center gap-3">
+                                <div class="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-500/10 text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+                                    {{ student_marks.name|slice:2 }}
+                                </div>
+                                <div>
+                                    <div class="text-sm font-bold text-slate-900 dark:text-white leading-tight">{{ student_marks.name }}</div>
+                                    <div class="text-[10px] font-mono text-slate-400">#{{ student_marks.roll_no }}</div>
+                                </div>
+                            </div>
+                        </td>
+
+                        {% for subject in student_marks.subjects %}
+                        <td class="py-4 px-4 text-center border-l border-slate-50 dark:border-white/5">
+                            <div class="flex flex-col">
+                                <span class="text-sm font-bold text-slate-700 dark:text-slate-200">
+                                    {{ subject.internal_marks|default:"-" }}
+                                </span>
+                                <span class="text-[10px] text-slate-400">/{{ subject.max_marks }}</span>
+                            </div>
+                        </td>
+                        {% endfor %}
+
+                        <td class="py-4 px-6 text-center bg-indigo-50/30 dark:bg-indigo-500/5">
+                            <div class="inline-flex flex-col px-3 py-1 rounded-lg bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
+                                <span class="text-sm font-black text-indigo-600 dark:text-indigo-400">{{ student_marks.total_obtained }}</span>
+                                <span class="text-[9px] text-indigo-300 dark:text-indigo-700 font-bold uppercase">{{ total_possible_marks }} MAX</span>
+                            </div>
+                        </td>
+
+                        <td class="py-4 px-6 text-center">
+                            <span class="inline-flex items-center justify-center h-9 w-12 rounded-full text-xs font-black
+                                {% if student_marks.average >= 75 %} bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400
+                                {% elif student_marks.average >= 40 %} bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400
+                                {% else %} bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 {% endif %}">
+                                {{ student_marks.average }}%
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+                            <!-- Print-optimized table (hidden on screen, visible during print) -->
+                            <div class="print-table">
+                                <table class="print-marks-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Roll No</th>
+                                            <th>Student Name</th>
+                                            {% for subject in subjects %}
+                                            <th>{{ subject.subject_name }}</th>
+                                            {% endfor %}
+                                            <th>Total</th>
+                                            <th>Average</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for student_marks in marks_data %}
+                                        <tr>
+                                            <td>{{ student_marks.roll_no }}</td>
+                                            <td>{{ student_marks.name }}</td>
+                                            {% for subject in student_marks.subjects %}
+                                            <td>{{ subject.internal_marks }}/{{ subject.max_marks }}</td>
+                                            {% endfor %}
+                                            <td>{{ student_marks.total_obtained }}/{{ total_possible_marks }}</td>
+                                            <td>{{ student_marks.average }}%</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Spotlight Movement
+        document.addEventListener('mousemove', (e) => {
+            const spotlight = document.getElementById('spotlight');
+            spotlight.style.setProperty('--x', `${e.clientX}px`);
+            spotlight.style.setProperty('--y', `${e.clientY}px`);
+        });
+
+        // Sidebar Toggle
+        const hamburgerButton = document.getElementById('hamburger-button');
+        const sidebar = document.getElementById('sidebar');
+        const closeSidebar = document.getElementById('close-sidebar');
+
+        hamburgerButton.addEventListener('click', () => {
+            sidebar.classList.remove('-translate-x-full');
+        });
+        closeSidebar.addEventListener('click', () => {
+            sidebar.classList.add('-translate-x-full');
+        });
+
+        // Theme Switch
+        const themeBtn = document.getElementById('theme-switch');
+        const themeIcon = document.getElementById('theme-icon');
+        
+        function updateThemeUI() {
+            const isDark = document.documentElement.classList.contains('dark');
+            themeIcon.className = isDark ? 'fa-solid fa-sun text-amber-400' : 'fa-solid fa-moon text-brand-600';
+        }
+        updateThemeUI();
+
+        themeBtn.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            updateThemeUI();
+        });
+        
+        function applyDateFilter() {
+            const selectedDate = document.getElementById('attendance-date').value;
+            if (selectedDate) {
+                // Construct new URL with date filter
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('type', 'attendance');
+                currentUrl.searchParams.set('date', selectedDate);
+                window.location.href = currentUrl.toString();
+            }
+        }
+        
+        // Set default date if not already set
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateInput = document.getElementById('attendance-date');
+            if (dateInput) {
+                dateInput.max = new Date().toISOString().split('T')[0];
+                
+                if (!dateInput.value && '{{ report_type }}' === 'attendance') {
+                    // Use the selected date from backend or fallback to today
+                    const backendDate = '{{ selected_date }}';
+                    if (backendDate !== 'None') {
+                        dateInput.value = backendDate;
+                    } else {
+                        const today = new Date().toISOString().split('T')[0];
+                        dateInput.value = today;
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

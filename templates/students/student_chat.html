@@ -1,0 +1,565 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eduke | Chat Terminal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+  <script>
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+            accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+    html,
+    body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      position: fixed;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      letter-spacing: -0.01em;
+      background-color: #f8fafc;
+    }
+
+    .dark body {
+      background-color: #020617;
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      z-index: 0;
+      opacity: 0.3;
+      animation: float 20s infinite alternate;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translate(0, 0);
+      }
+
+      100% {
+        transform: translate(80px, 40px);
+      }
+    }
+
+    .glass-sidebar {
+      background: rgba(10, 10, 20, 0.95);
+      backdrop-filter: blur(30px);
+      border-right: 1px solid rgba(139, 92, 246, 0.1);
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .dark .glass-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-item-link.active {
+      color: #a78bfa !important;
+      background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+    }
+
+    .nav-item-link.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 25%;
+      height: 50%;
+      width: 4px;
+      background: #d946ef;
+      box-shadow: 0 0 15px #d946ef;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #8b5cf633;
+      border-radius: 10px;
+    }
+
+    .search-input:focus~.search-icon {
+      color: #8b5cf6;
+    }
+  </style>
+</head>
+
+<body class="text-slate-900">
+  <div class="orb w-96 h-96 bg-brand-500 top-[-10%] left-[-10%]"></div>
+  <div class="orb w-80 h-80 bg-accent-indigo bottom-[10%] right-[5%]"></div>
+
+  <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-full">
+      <div class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5 bg-[#0a0a14]/80 backdrop-blur-xl">
+
+        <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+          <div class="flex items-center gap-3 group">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 animate-pulse">
+              <img src="{% static 'main/images/logobase_white.png' %}" class="w-6 h-6 object-contain">
+            </div>
+            <div>
+              <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span class="text-accent-fuchsia">.</span></h2>
+              <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Student Portal</p>
+            </div>
+          </div>
+          <button id="close-sidebar" class="lg:hidden text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+
+        <nav class="flex-grow px-4 space-y-4 overflow-y-auto custom-scroll py-2">
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Academic</p>
+            <div class="space-y-1">
+              <a href="{% url 'student_dashboard' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-layer-group"></i><span class="font-bold text-sm">Dashboard</span>
+              </a>
+              <a href="{% url 'student_class' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-chalkboard"></i><span class="font-bold text-sm">Your Class</span>
+              </a>
+              <a href="{% url 'student_performance'%}" class="nav-item-link  relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-chart-line"></i><span class="font-bold text-sm">Performance</span>
+              </a>
+              <a href="{% url 'student_view_attendance'%}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-calendar-check"></i><span class="font-bold text-sm">View Attendance</span>
+              </a>
+              <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">AI Tools</p>
+            <div class="space-y-1">
+              <a href="{% url 'student_prediction' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_prediction' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-fire-flame-curved text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Prediction</span>
+              </a>
+
+              <a href="{% url 'student_eduke_bot' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_eduke_bot' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-robot text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Eduke Bot</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Social</p>
+            <div class="space-y-1">
+              <a href="{% url 'student_chat' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_chat' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-comments text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Eduke Chat</span>
+              </a>
+
+              <a href="{% url 'student_profile' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_profile' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-circle-user text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Profile</span>
+              </a>
+            </div>
+          </div>
+            </div>
+          </div>
+        </nav>
+
+        <div class="p-4 mt-auto">
+          <div class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 font-black text-white text-xs">
+                {{ student_name|slice:":1"|upper }}
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-[11px] font-black text-white truncate uppercase">{{ student_name }}</h4>
+                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Student</p>
+              </div>
+            </div>
+            <a href="{% url 'logout' %}" class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 transition-all">
+              <span class="text-[9px] font-black uppercase tracking-widest group-hover/btn:text-white">Logout</span>
+              <i class="fa-solid fa-power-off text-[10px] group-hover/btn:text-white"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+      <header class="h-24 flex items-center justify-between px-8 shrink-0">
+        <div class="flex items-center gap-6">
+          <button id="hamburger-button"
+            class="lg:hidden w-12 h-12 flex items-center justify-center rounded-2xl glass-card text-brand-600 shadow-lg"><i
+              class="fas fa-bars"></i></button>
+          <div>
+            <h2 class="text-2xl lg:text-3xl font-black text-slate-800 dark:text-white tracking-tighter italic">Eduke
+              <span class="text-brand-500">Comms</span></h2>
+            <p class="text-[10px] font-black text-purple-700 uppercase tracking-[0.2em] mt-1">Secure Messaging Terminal
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          {% include 'students/_notification_bell.html' %}
+          <button id="theme-switch"
+            class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center hover:scale-110 transition-transform">
+            <i id="theme-icon" class="fa-solid fa-moon text-brand-600 text-lg"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="px-8 mb-8">
+  <div class="max-w-4xl mx-auto relative group">
+    <i class="fa-solid fa-magnifying-glass absolute left-6 top-1/2 -translate-y-1/2 
+              text-slate-400 group-focus-within:text-brand-500 transition-colors z-30"></i>
+    
+    <input type="text" id="chat-search" placeholder="Search transmissions or specialists..."
+      class="w-full pl-14 pr-6 py-5 rounded-[2rem] 
+             /* Light Theme: Crisp white with defined border and soft shadow */
+             bg-white border-slate-200 shadow-sm text-slate-900 placeholder:text-slate-400
+             /* Dark Theme: Deep glass effect with subtle border */
+             dark:bg-slate-900/40 dark:backdrop-blur-xl dark:border-white/10 dark:text-white dark:placeholder:text-slate-500
+             /* Interaction: Brand glow and lift */
+             border focus:ring-4 focus:ring-brand-500/10 focus:border-brand-500 focus:shadow-xl 
+             hover:border-slate-300 dark:hover:border-white/20
+             outline-none text-sm font-bold tracking-tight transition-all duration-300">
+             
+    <div class="absolute right-6 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1 pointer-events-none">
+        <kbd class="px-2 py-1 rounded-md bg-slate-100 dark:bg-white/10 text-[10px] font-black text-slate-400 uppercase tracking-tighter">Ctrl</kbd>
+        <kbd class="px-2 py-1 rounded-md bg-slate-100 dark:bg-white/10 text-[10px] font-black text-slate-400 uppercase tracking-tighter">K</kbd>
+    </div>
+  </div>
+</div>
+
+      <div id="content-wrapper" class="flex-1 overflow-y-auto px-4 lg:px-8 pb-12 space-y-12 custom-scroll">
+        <div class="max-w-4xl mx-auto space-y-12">
+
+          <section class="space-y-6">
+            <div class="flex items-center gap-4">
+              <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">Active Transmissions</h3>
+              <div class="h-px flex-1 bg-slate-200 dark:bg-white/10"></div>
+            </div>
+
+            <ul id="active-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {% if class_heads or subject_heads %}
+              {% for head in class_heads %}
+              <li class="chat-item" data-name="{{ head.1 }}">
+                <a href="{% url 'student_chat_user' head.0 %}"
+                  class="glass-card group flex items-center p-4 rounded-[1.5rem] hover:scale-[1.02] border-b-2 border-b-transparent hover:border-b-accent-fuchsia">
+                  <div class="relative shrink-0">
+                    <div
+                      class="w-12 h-12 bg-gradient-to-br from-[#3a0065] to-brand-700 text-white flex items-center justify-center rounded-xl text-lg font-black shadow-lg group-hover:rotate-3 transition-transform">
+                      {{ head.1|first|upper }}
+                    </div>
+                    <div
+                      class="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full animate-pulse">
+                    </div>
+                    <!-- Notification badge will be added dynamically via AJAX -->
+                  </div>
+                  <div class="ml-4 min-w-0 flex-1">
+                    <p
+                      class="font-bold text-sm text-slate-800 dark:text-white truncate tracking-tight group-hover:text-brand-500 transition-colors">
+                      {{ head.1 }}</p>
+                    <div class="flex items-center gap-2">
+                      <span class="text-[8px] font-black uppercase text-purple-500 tracking-tighter">Class Head</span>
+                      <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+                      <span class="text-[9px] text-slate-400 font-medium">Online</span>
+                      <!-- New indicator will be added dynamically via AJAX -->
+                    </div>
+                  </div>
+                  <div class="ml-2">
+                    <i
+                      class="fa-solid fa-arrow-right-long text-slate-300 group-hover:text-brand-500 group-hover:translate-x-1 transition-all"></i>
+                  </div>
+                </a>
+              </li>
+              {% endfor %}
+
+              {% for head in subject_heads %}
+              <li class="chat-item" data-name="{{ head.1 }}">
+                <a href="{% url 'student_chat_user' head.0 %}"
+                  class="glass-card group flex items-center p-4 rounded-[1.5rem] hover:scale-[1.02] border-b-2 border-b-transparent hover:border-b-brand-500">
+                  <div class="relative shrink-0">
+                    <div
+                      class="w-12 h-12 bg-gradient-to-br from-[#7f00db] to-indigo-600 text-white flex items-center justify-center rounded-xl text-lg font-black shadow-lg group-hover:rotate-3 transition-transform">
+                      {{ head.1|first|upper }}
+                    </div>
+                    <!-- Notification badge will be added dynamically via AJAX -->
+                  </div>
+                  <div class="ml-4 min-w-0 flex-1">
+                    <p
+                      class="font-bold text-sm text-slate-800 dark:text-white truncate tracking-tight group-hover:text-brand-500 transition-colors">
+                      {{ head.1 }}</p>
+                    <div class="flex items-center gap-2">
+                      <span class="text-[8px] font-black uppercase text-brand-500 tracking-tighter">Subject Head</span>
+                      <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+                      <span class="text-[9px] text-slate-400 font-medium">Verified</span>
+                      <!-- New indicator will be added dynamically via AJAX -->
+                    </div>
+                  </div>
+                  <div class="ml-2">
+                    <i
+                      class="fa-solid fa-arrow-right-long text-slate-300 group-hover:text-brand-500 group-hover:translate-x-1 transition-all"></i>
+                  </div>
+                </a>
+              </li>
+              {% endfor %}
+              {% else %}
+              <div
+                class="col-span-full text-center py-8 glass-card rounded-[2rem] border-dashed border-2 border-slate-200 dark:border-white/10">
+                <p class="text-slate-400 font-bold uppercase tracking-widest text-[9px]">No active transmissions.</p>
+              </div>
+              {% endif %}
+            </ul>
+          </section>
+
+          <section class="space-y-10 pb-20">
+            <div class="flex items-center justify-between gap-4">
+              <div class="flex items-center gap-4">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">Discovery</h3>
+                <div class="h-px flex-1 bg-slate-200 dark:bg-white/10"></div>
+              </div>
+              {% if class_heads or subject_heads %}
+              <button id="toggle-suggested-btn" class="flex items-center gap-2 px-4 py-2 rounded-full bg-brand-500/10 hover:bg-brand-500/20 text-brand-500 hover:text-brand-600 transition-all text-xs font-black uppercase tracking-wider">
+                <span>Show Suggestions</span>
+                <i class="fa-solid fa-chevron-down transition-transform"></i>
+              </button>
+              {% endif %}
+            </div>
+
+            <div id="suggested-section" class="{% if not class_heads and not subject_heads %}block{% else %}hidden{% endif %} space-y-10">
+              <div class="space-y-4">
+                <h4 class="text-[10px] font-black text-purple-500 uppercase tracking-widest ml-2 flex items-center gap-2">
+                  <i class="fa-solid fa-graduation-cap"></i> Institution Class Heads
+                </h4>
+                <ul class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {% for user in suggested_class_heads %}
+                  <li class="chat-item" data-name="{{ user.2 }}">
+                    <a href="{% url 'student_chat_user' user.0 %}"
+                      class="glass-card flex items-center p-5 rounded-[2.5rem] group border border-transparent hover:border-brand-500/30 hover:shadow-xl">
+                      <div
+                        class="w-12 h-12 flex items-center justify-center rounded-2xl text-lg font-black bg-purple-50 dark:bg-purple-900/20 text-purple-700 group-hover:scale-110 transition-transform">
+                        {{ user.2|first|upper }}
+                      </div>
+                      <div class="ml-4 flex-1">
+                        <p class="font-bold text-md text-slate-700 dark:text-slate-300 tracking-tight">{{ user.2 }}</p>
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Management</p>
+                      </div>
+                      <div
+                        class="w-10 h-10 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:bg-brand-500 group-hover:text-white transition-all">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                      </div>
+                    </a>
+                  </li>
+                  {% empty %}
+                  <p class="text-slate-400 text-[10px] italic ml-2">No other class heads found.</p>
+                  {% endfor %}
+                </ul>
+              </div>
+
+              <div class="space-y-4">
+                <h4 class="text-[10px] font-black text-blue-500 uppercase tracking-widest ml-2 flex items-center gap-2">
+                  <i class="fa-solid fa-book-open"></i> Subject Specialists
+                </h4>
+                <ul class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {% for user in suggested_subject_heads %}
+                  <li class="chat-item" data-name="{{ user.2 }}">
+                    <a href="{% url 'student_chat_user' user.0 %}"
+                      class="glass-card flex items-center p-5 rounded-[2.5rem] group border border-transparent hover:border-brand-500/30 hover:shadow-xl">
+                      <div
+                        class="w-12 h-12 flex items-center justify-center rounded-2xl text-lg font-black bg-blue-50 dark:bg-blue-900/20 text-blue-700 group-hover:scale-110 transition-transform">
+                        {{ user.2|first|upper }}
+                      </div>
+                      <div class="ml-4 flex-1">
+                        <p class="font-bold text-md text-slate-700 dark:text-slate-300 tracking-tight">{{ user.2 }}</p>
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Expert</p>
+                      </div>
+                      <div
+                        class="w-10 h-10 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:bg-brand-500 group-hover:text-white transition-all">
+                        <i class="fa-solid fa-comment-dots text-xs"></i>
+                      </div>
+                    </a>
+                  </li>
+                  {% empty %}
+                  <p class="text-slate-400 text-[10px] italic ml-2">No other subject heads found.</p>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Search Functionality
+    const searchInput = document.getElementById('chat-search');
+    const chatItems = document.querySelectorAll('.chat-item');
+
+    searchInput.addEventListener('input', (e) => {
+      const term = e.target.value.toLowerCase();
+      chatItems.forEach(item => {
+        const name = item.getAttribute('data-name').toLowerCase();
+        if (name.includes(term)) {
+          item.style.display = 'block';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    });
+
+    // Toggle Suggested Users Section
+    const toggleBtn = document.getElementById('toggle-suggested-btn');
+    const suggestedSection = document.getElementById('suggested-section');
+    
+    if (toggleBtn && suggestedSection) {
+      toggleBtn.addEventListener('click', () => {
+        const isHidden = suggestedSection.classList.contains('hidden');
+        
+        if (isHidden) {
+          suggestedSection.classList.remove('hidden');
+          suggestedSection.classList.add('block');
+          toggleBtn.querySelector('span').textContent = 'Hide Suggestions';
+          toggleBtn.querySelector('i').classList.add('rotate-180');
+        } else {
+          suggestedSection.classList.add('hidden');
+          suggestedSection.classList.remove('block');
+          toggleBtn.querySelector('span').textContent = 'Show Suggestions';
+          toggleBtn.querySelector('i').classList.remove('rotate-180');
+        }
+      });
+    }
+
+    // Theme & Sidebar logic
+    const hamBtn = document.getElementById('hamburger-button');
+    const sidebar = document.getElementById('sidebar');
+    const closeBtn = document.getElementById('close-sidebar');
+    const themeSwitch = document.getElementById('theme-switch');
+    const themeIcon = document.getElementById('theme-icon');
+    
+    // Initialize theme icon based on current theme
+    if (document.documentElement.classList.contains('dark')) {
+      themeIcon.className = 'fa-solid fa-sun text-yellow-400 text-lg';
+    } else {
+      themeIcon.className = 'fa-solid fa-moon text-brand-600 text-lg';
+    }
+    
+    hamBtn.addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+    closeBtn.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+    
+    themeSwitch.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      const isDark = document.documentElement.classList.contains('dark');
+      localStorage.theme = isDark ? 'dark' : 'light';
+      themeIcon.className = isDark ? 'fa-solid fa-sun text-yellow-400 text-lg' : 'fa-solid fa-moon text-brand-600 text-lg';
+    });
+
+    // Real-time notification count updates via AJAX
+    function updateNotificationCounts() {
+      fetch("{% url 'student_get_unread_count' %}")
+        .then(response => response.json())
+        .then(data => {
+          console.log('Unread count data:', data);
+          
+          // Create a map of sender_id to count
+          const senderCounts = {};
+          if (data.senders && data.senders.length > 0) {
+            data.senders.forEach(sender => {
+              senderCounts[sender.sender_id] = sender.count;
+            });
+          }
+          
+          // Update badge indicators on chat items
+          document.querySelectorAll('.chat-item').forEach(item => {
+            const link = item.querySelector('a');
+            if (!link) return;
+            
+            // Extract user ID from href
+            const href = link.getAttribute('href');
+            const userIdMatch = href.match(/\/student\/chat\/(\d+)\//);
+            if (!userIdMatch) return;
+            
+            const userId = parseInt(userIdMatch[1]);
+            const unreadCount = senderCounts[userId] || 0;
+            
+            // Remove existing badges
+            item.querySelectorAll('.notification-badge-realtime').forEach(el => el.remove());
+            
+            // Add new badge if there are unread messages
+            if (unreadCount > 0) {
+              const avatarDiv = item.querySelector('.relative.shrink-0') || item.querySelector('.relative');
+              if (avatarDiv) {
+                const badge = document.createElement('div');
+                badge.className = 'notification-badge-realtime absolute -bottom-1 -right-1 w-5 h-5 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 animate-pulse';
+                badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                avatarDiv.appendChild(badge);
+              }
+              
+              // Add "New" indicator
+              const statusDiv = item.querySelector('.flex.items-center.gap-2');
+              if (statusDiv && !statusDiv.querySelector('.new-indicator-realtime')) {
+                const newIndicator = document.createElement('span');
+                newIndicator.className = 'new-indicator-realtime ml-1 text-[8px] font-black text-red-500';
+                newIndicator.textContent = '• New';
+                statusDiv.appendChild(newIndicator);
+              }
+            }
+          });
+        })
+        .catch(error => console.error('Error fetching notification counts:', error));
+    }
+
+    // Initial update after a short delay
+    setTimeout(updateNotificationCounts, 500);
+    
+    // Poll for updates every 3 seconds
+    const notificationPollInterval = setInterval(updateNotificationCounts, 3000);
+    
+    // Stop polling when leaving page
+    window.addEventListener('beforeunload', () => {
+      clearInterval(notificationPollInterval);
+    });
+  </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-link.active');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+
+</html>

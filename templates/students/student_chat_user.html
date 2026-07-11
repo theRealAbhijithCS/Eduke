@@ -1,0 +1,540 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eduke | Chat Terminal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+  <script>
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+            accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f8fafc;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    .dark body {
+      background-color: #020617;
+    }
+
+    #spotlight {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.12) 0%, transparent 35%);
+      z-index: 1;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    .dark .glass-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .glass-sidebar {
+      background: #0a0a14;
+      border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(139, 92, 246, 0.2);
+      border-radius: 10px;
+    }
+
+    .message-enter {
+      animation: bubbleUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes bubbleUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes shimmer {
+      100% {
+        transform: translateX(100%);
+      }
+    }
+
+    /* Hide scrollbar for textarea */
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+
+    .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Fix text color in dark mode */
+    .dark textarea#student-message {
+      color: #e2e8f0 !important;
+    }
+
+    textarea#student-message {
+      color: #1e293b !important;
+    }
+
+    .nav-item-link { position: relative; transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); }
+    .nav-item-link.active {
+      color: #a78bfa !important;
+      background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+    }
+    .nav-item-link.active::before {
+      content: ''; position: absolute; left: 0; top: 25%; height: 50%; width: 4px;
+      background: #d946ef; box-shadow: 0 0 15px #d946ef; border-radius: 0 4px 4px 0;
+    }
+  </style>
+</head>
+
+<body class="antialiased text-slate-900">
+  <div id="spotlight"></div>
+
+  <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-full">
+      <div class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5 bg-[#0a0a14]/80 backdrop-blur-xl">
+
+        <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+          <div class="flex items-center gap-3 group">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 animate-pulse">
+              <img src="{% static 'main/images/logobase_white.png' %}" class="w-6 h-6 object-contain">
+            </div>
+            <div>
+              <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span class="text-accent-fuchsia">.</span></h2>
+              <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Student Portal</p>
+            </div>
+          </div>
+          <button id="close-sidebar" class="lg:hidden text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+
+        <nav class="flex-grow px-4 space-y-4 overflow-y-auto custom-scroll py-2">
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Academic</p>
+            <div class="space-y-1">
+              <a href="{% url 'student_dashboard' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-layer-group"></i><span class="font-bold text-sm">Dashboard</span>
+              </a>
+              <a href="{% url 'student_class' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-chalkboard"></i><span class="font-bold text-sm">Your Class</span>
+              </a>
+              <a href="{% url 'student_performance'%}" class="nav-item-link  relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-chart-line"></i><span class="font-bold text-sm">Performance</span>
+              </a>
+              <a href="{% url 'student_view_attendance'%}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-calendar-check"></i><span class="font-bold text-sm">View Attendance</span>
+              </a>
+              <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">AI Tools</p>
+            <div class="space-y-1">
+              <a href="{% url 'student_prediction' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_prediction' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-fire-flame-curved text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Prediction</span>
+              </a>
+
+              <a href="{% url 'student_eduke_bot' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_eduke_bot' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-robot text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Eduke Bot</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Social</p>
+            <div class="space-y-1">
+              <a href="{% url 'student_chat' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_chat_user' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-comments text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Eduke Chat</span>
+              </a>
+
+              <a href="{% url 'student_profile' %}" class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_profile' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                <i class="fa-solid fa-circle-user text-base group-hover:text-brand-400 transition-colors"></i>
+                <span class="font-bold text-sm">Profile</span>
+              </a>
+            </div>
+          </div>
+            </div>
+          </div>
+        </nav>
+
+        <div class="p-4 mt-auto">
+          <div class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 font-black text-white text-xs">
+                {{ student_name|slice:":1"|upper }}
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-[11px] font-black text-white truncate uppercase">{{ student_name }}</h4>
+                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Student</p>
+              </div>
+            </div>
+            <a href="{% url 'logout' %}" class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 transition-all">
+              <span class="text-[9px] font-black uppercase tracking-widest group-hover/btn:text-white">Logout</span>
+              <i class="fa-solid fa-power-off text-[10px] group-hover/btn:text-white"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main id="main-content"
+      class="flex-1 flex flex-col min-w-0 overflow-hidden glass-card lg:rounded-[3rem] shadow-2xl">
+
+      <header
+        class="h-24 flex items-center justify-between px-8 border-b border-slate-200 dark:border-white/5 shrink-0 bg-white/40 dark:bg-slate-900/40">
+        <div class="flex items-center gap-5">
+          <button id="hamburger-button"
+            class="lg:hidden w-11 h-11 flex items-center justify-center rounded-xl glass-card text-brand-600">
+            <i class="fa-solid fa-bars-staggered"></i>
+          </button>
+          <div class="relative group">
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black text-white shadow-xl transition-transform group-hover:scale-105
+                    {% if selected_user_role == 'class_head' %} bg-gradient-to-br from-brand-600 to-indigo-800
+                    {% else %} bg-gradient-to-br from-accent-indigo to-brand-600 {% endif %}">
+              {{ selected_user_name|first|upper }}
+            </div>
+            <span
+              class="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-4 border-white dark:border-[#0f172a] rounded-full"></span>
+          </div>
+          <div>
+            <h2 class="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+              {{selected_user_name }}</h2>
+            <div class="flex items-center gap-2 mt-1.5">
+              <span
+                class="px-2 py-0.5 rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400 text-[10px] font-black uppercase tracking-widest">
+                {% if selected_user_role == 'class_head' %} Commanding Faculty {% else %} Subject Module Head {% endif%}
+              </span>
+              <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Protocol Active</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <a href="{% url 'student_chat' %}"
+            class="group flex items-center gap-3 px-4 py-2 rounded-xl glass-card border border-brand-500/20 hover:bg-brand-500 hover:text-white transition-all duration-300">
+            <i
+              class="fa-solid fa-chevron-left text-[10px] group-hover:-translate-x-1 transition-transform text-slate-700 dark:text-white"></i>
+            <span
+              class="mono text-[10px] font-black text-slate-700 dark:text-white uppercase tracking-widest">Return_Node</span>
+          </a>
+
+          <div class="h-6 w-px bg-slate-200 dark:bg-white/10 mx-1"></div>
+
+          {% include 'students/_notification_bell.html' %}
+
+          <button id="theme-switch"
+            class="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-brand-600 dark:text-amber-400 hover:scale-110 transition-transform border border-white/20">
+            <i id="theme-icon" class="fa-solid fa-moon text-xs"></i>
+          </button>
+        </div>
+      </header>
+
+      <div id="message-container"
+        class="flex-1 overflow-y-auto px-6 py-10 space-y-8 custom-scroll bg-slate-50/30 dark:bg-transparent">
+        {% for message in messages %}
+        <div
+          class="flex {% if message.1 == logged_in_user_id %}justify-end{% else %}justify-start{% endif %} message-enter">
+          <div
+            class="max-w-[75%] md:max-w-[60%] flex flex-col {% if message.1 == logged_in_user_id %}items-end{% else %}items-start{% endif %}">
+            <div class="px-5 py-3.5 shadow-sm rounded-2xl relative
+                      {% if message.1 == logged_in_user_id %}
+                          bg-gradient-to-br from-brand-600 to-indigo-700 text-white rounded-tr-none
+                      {% else %}
+                          bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 rounded-tl-none
+                      {% endif %}">
+              <p class="text-[15px] font-medium leading-relaxed leading-snug">{{ message.0 }}</p>
+            </div>
+            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2 px-1"
+              data-datetime="{{ message.3|date:'c' }}">
+              {{ message.3|date:"M d, h:i A" }}
+              {% if message.1 == logged_in_user_id %}
+              <span class="ml-1 text-brand-500"><i class="fa-solid fa-check-double text-[8px]"></i></span>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+        {% empty %}
+        <div class="h-full flex flex-col items-center justify-center text-center opacity-30">
+          <i class="fa-solid fa-comments text-7xl mb-4 text-brand-500"></i>
+          <p class="font-black uppercase tracking-[0.3em] text-xs text-slate-500">Initialize Transmission</p>
+          <p class="text-[10px] font-bold text-slate-400 mt-2">Start a secure conversation with {{ selected_user_name }}
+          </p>
+        </div>
+        {% endfor %}
+      </div>
+
+      <footer class="p-6 shrink-0 border-t border-slate-200 dark:border-white/5 bg-white/40 dark:bg-slate-900/40">
+        <form id="messageForm" method="POST" class="max-w-5xl mx-auto flex items-center gap-4">
+          {% csrf_token %}
+          <div class="flex-1 relative group">
+            <textarea name="message" id="student-message" placeholder="Execute message delivery..." required rows="1"
+              class="w-full pl-6 pr-14 py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-2xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-brand-500/10 transition-all resize-none shadow-inner overflow-hidden scrollbar-hide"></textarea>
+            <i
+              class="fa-solid fa-shield-halved absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600"></i>
+          </div>
+          <button type="submit"
+            class="relative w-14 h-14 bg-gradient-to-br from-brand-500 to-indigo-700 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-brand-500/30 transition-all duration-500 hover:shadow-brand-500/50 hover:-translate-y-1 hover:scale-110 active:scale-95 group overflow-hidden">
+            <div
+              class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]">
+            </div>
+            <i
+              class="fa-solid fa-paper-plane rotate-45 text-xl relative z-10 transition-all duration-500 group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:scale-110"></i>
+          </button>
+        </form>
+      </footer>
+
+  </div>
+  </div>
+  </main>
+  </div>
+
+  <script>
+    // Spotlight Movement
+    document.addEventListener('mousemove', e => {
+      const spotlight = document.getElementById('spotlight');
+      spotlight.style.setProperty('--x', `${e.clientX}px`);
+      spotlight.style.setProperty('--y', `${e.clientY}px`);
+    });
+
+    // Convert server timestamps to local time on page load
+    document.querySelectorAll('[data-datetime]').forEach(element => {
+      const datetimeStr = element.getAttribute('data-datetime');
+      if (datetimeStr) {
+        const date = new Date(datetimeStr);
+        const localTimeStr = date.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+        const checkMark = element.querySelector('.fa-check-double')?.parentElement;
+        element.textContent = localTimeStr;
+        if (checkMark) {
+          element.appendChild(checkMark);
+        }
+      }
+    });
+
+    // Theme Control
+    const themeBtn = document.getElementById('theme-switch');
+    const themeIcon = document.getElementById('theme-icon');
+
+    function updateIcon() {
+      const isDark = document.documentElement.classList.contains('dark');
+      themeIcon.className = isDark ? 'fa-solid fa-sun text-yellow-400' : 'fa-solid fa-moon text-slate-500';
+    }
+    updateIcon();
+
+    themeBtn.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.theme = isDark ? 'dark' : 'light';
+      updateIcon();
+    });
+
+    // Sidebar Toggle
+    const hamburgerButton = document.getElementById('hamburger-button');
+    const sidebar = document.getElementById('sidebar');
+    hamburgerButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sidebar.classList.toggle('-translate-x-full');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (window.innerWidth < 1024 && !sidebar.contains(e.target) && !hamburgerButton.contains(e.target)) {
+        sidebar.classList.add('-translate-x-full');
+      }
+    });
+
+    // Auto-Scroll to bottom
+    const messageContainer = document.getElementById("message-container");
+    const scrollToBottom = () => {
+      messageContainer.scrollTop = messageContainer.scrollHeight;
+    };
+    window.addEventListener("load", scrollToBottom);
+
+    // Real-time Message Polling
+    let lastMessageCount = parseInt("{{ messages|length }}") || 0;
+    const currentUserId = parseInt("{{ logged_in_user_id }}") || 0;
+    const TARGET_USER_ID = parseInt("{{ user_id }}") || null;
+
+    function fetchNewMessages() {
+      if (!TARGET_USER_ID) return;
+
+      fetch("{% url 'student_fetch_messages' user_id=user_id %}")
+        .then(response => {
+          if (!response.ok) throw new Error('Network response was not ok');
+          return response.json();
+        })
+        .then(data => {
+          console.log("Fetched messages:", data.messages.length, "Current count:", lastMessageCount);
+          if (data.messages && data.messages.length > lastMessageCount) {
+            const newMessages = data.messages.slice(lastMessageCount);
+            console.log("Appending", newMessages.length, "new messages");
+            appendNewMessages(newMessages);
+            lastMessageCount = data.messages.length;
+          }
+        })
+        .catch(error => console.error('Error fetching messages:', error));
+    }
+
+    function appendNewMessages(messages) {
+      messages.forEach((msg) => {
+        const isSentByMe = msg.sender_id === currentUserId;
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `flex ${isSentByMe ? 'justify-end' : 'justify-start'} message-enter`;
+
+        const timestamp = new Date(msg.created_at);
+        const timeStr = timestamp.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+
+        messageDiv.innerHTML = `
+                  <div class="max-w-[75%] md:max-w-[60%] flex flex-col ${isSentByMe ? 'items-end' : 'items-start'}">
+                      <div class="px-5 py-3.5 shadow-sm rounded-2xl relative ${isSentByMe
+            ? 'bg-gradient-to-br from-brand-600 to-indigo-700 text-white rounded-tr-none'
+            : 'bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 rounded-tl-none'
+          }">
+                          <p class="text-[15px] font-medium leading-relaxed leading-snug">${escapeHtml(msg.message)}</p>
+                      </div>
+                      <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2 px-1">
+                          ${timeStr}
+                          ${isSentByMe ? '<span class="ml-1 text-brand-500"><i class="fa-solid fa-check-double text-[8px]"></i></span>' : ''}
+                      </p>
+                  </div>
+              `;
+
+        messageContainer.appendChild(messageDiv);
+      });
+
+      scrollToBottom();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Poll for new messages every 2 seconds
+    const pollInterval = setInterval(fetchNewMessages, 2000);
+
+    // Stop polling when leaving the page
+    window.addEventListener('beforeunload', () => {
+      clearInterval(pollInterval);
+    });
+
+    // Input Handling
+    const messageForm = document.getElementById("messageForm");
+    const inputField = document.getElementById("student-message");
+
+    // Send message on Enter key (without Shift)
+    inputField.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        messageForm.dispatchEvent(new Event('submit'));
+      }
+    });
+
+    messageForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const message = inputField.value.trim();
+
+      if (message) {
+        const formData = new FormData(messageForm);
+
+        fetch(window.location.href, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+          .then(response => {
+            if (response.ok) {
+              inputField.value = "";
+              inputField.style.height = 'auto';
+              inputField.focus();
+              setTimeout(fetchNewMessages, 300);
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            messageForm.submit();
+          });
+      }
+    });
+
+    // Dynamic Textarea Height
+    inputField.addEventListener("input", function () {
+      this.style.height = "auto";
+      this.style.height = (this.scrollHeight) + "px";
+      if (this.scrollHeight > 120) this.style.overflowY = "scroll";
+    });
+  </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-link.active');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+
+</html>

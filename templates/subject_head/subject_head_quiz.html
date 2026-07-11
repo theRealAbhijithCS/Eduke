@@ -1,0 +1,678 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Eduke | Quiz Constructor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+  <script>
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+            accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+    
+    html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.01em; background-color: #f8fafc; }
+    .dark body { background-color: #020617; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    #spotlight {
+      position: fixed; inset: 0; pointer-events: none;
+      background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.12) 0%, transparent 40%);
+      z-index: 5;
+    }
+
+    .glass-sidebar { background: rgba(10, 10, 20, 0.95); backdrop-filter: blur(30px); border-right: 1px solid rgba(139, 92, 246, 0.1); }
+    
+    .glass-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .dark .glass-card { background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); }
+
+    .nav-item-link { position: relative; transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); }
+    .nav-item-link.active { color: #a78bfa !important; background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%); }
+    .nav-item-link.active::before { content: ''; position: absolute; left: 0; top: 25%; height: 50%; width: 4px; background: #d946ef; box-shadow: 0 0 15px #d946ef; border-radius: 0 4px 4px 0; }
+
+    .input-node { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 0.75rem 1rem; transition: all 0.3s ease; outline: none; }
+    .dark .input-node { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.1); color: white; }
+    .input-node:focus { border-color: #7c3aed; box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1); }
+
+    .custom-scroll::-webkit-scrollbar { width: 5px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #8b5cf633; border-radius: 10px; }
+
+    select option { background-color: white !important; color: #1e293b !important; }
+    .dark select option { background-color: #1e293b !important; color: white !important; }
+    @keyframes scan {
+        from { transform: translateY(-100%); }
+        to { transform: translateY(100%); }
+    }
+
+    @keyframes shimmer {
+        0% { background-position: 100% 0; }
+        100% { background-position: -100% 0; }
+    }
+  </style>
+</head>
+
+<body class="text-slate-900 dark:text-white">
+  <div id="toast-container" class="fixed top-6 right-6 z-[100] space-y-4"></div>
+  
+  <!-- Synchronization Overlay -->
+  <div id="sync-overlay" class="absolute inset-0 z-[50] bg-slate-900/60 backdrop-blur-md hidden items-center justify-center rounded-[3rem]">
+    <div class="text-center space-y-8 animate-in fade-in duration-500 px-8">
+      <!-- Scanning Animation Circle -->
+      <div class="relative w-32 h-32 mx-auto">
+        <div class="absolute inset-0 rounded-full border-4 border-brand-500/20"></div>
+        <div class="absolute inset-0 rounded-full border-4 border-t-brand-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+        <div class="absolute inset-3 rounded-full border-4 border-accent-fuchsia/30"></div>
+        <div class="absolute inset-3 rounded-full border-4 border-t-accent-fuchsia border-r-transparent border-b-transparent border-l-transparent animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
+        <div class="absolute inset-0 flex items-center justify-center">
+          <i class="fa-solid fa-satellite-dish text-4xl text-brand-400 animate-pulse"></i>
+        </div>
+      </div>
+      
+      <!-- Sync Text -->
+      <div class="space-y-4">
+        <h3 class="text-xl font-black text-white uppercase tracking-[0.3em] animate-pulse">Synchronizing</h3>
+        <p class="mono text-[8px] font-bold text-brand-400 uppercase tracking-[0.5em]">Deploying to Network Nodes</p>
+        <div class="w-56 h-1.5 bg-slate-700/50 rounded-full mx-auto overflow-hidden backdrop-blur-sm">
+          <div id="sync-progress" class="h-full bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 bg-[length:200%_100%] animate-[shimmer_1.5s_ease-in-out_infinite] shadow-lg shadow-brand-500/50" style="width: 0%;"></div>
+        </div>
+        <p id="sync-status" class="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Initializing Protocol...</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="spotlight"></div>
+
+  <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+    
+    <aside id="sidebar"
+      class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-full">
+      <div
+        class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5">
+
+        <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+          <div class="flex items-center gap-3 group cursor-pointer">
+            <div
+              class="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 group-hover:rotate-12 transition-transform animate-pulse bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 bg-[length:200%_200%]">
+              <img src="{% static 'main/images/logobase_white.png' %}" alt="Logo" class="w-6 h-6 object-contain">
+            </div>
+            <div>
+              <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span
+                  class="text-accent-fuchsia">.</span></h2>
+              <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Faculty Portal</p>
+            </div>
+          </div>
+          <button id="close-sidebar"
+            class="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white transition-all"><i
+              class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+
+        <nav class="flex-grow px-4 space-y-6 overflow-y-auto custom-scroll py-6">
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Management</p>
+            <div class="space-y-1">
+              <a href="{% url 'subject_head_dashboard' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-layer-group"></i><span class="font-bold text-sm">Dashboard</span>
+              </a>
+              <a href="{% url 'subject_head_subjects' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-book"></i><span class="font-bold text-sm">Your Subject</span>
+              </a>
+              <a href="{% url 'subject_head_class' %}" class="nav-item-link active flex items-center gap-3 px-6 py-3 rounded-xl text-white">
+                <i class="fa-solid fa-chalkboard"></i><span class="font-bold text-sm">Your Class</span>
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Academic Tools</p>
+            <div class="space-y-1">
+              <a href="{% url 'subject_head_attendance' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-hand-point-up"></i><span class="font-bold text-sm">Attendance</span>
+              </a>
+              <a href="{% url 'subject_head_marks' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-user-pen"></i><span class="font-bold text-sm">Student Marks</span>
+              </a>
+              <a href="{% url 'subject_head_evaluation' %}"
+                class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-square-poll-vertical"></i><span class="font-bold text-sm">Evaluation</span>
+              </a>
+            </div>
+          </div>
+
+          <div>
+    <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Communication</p>
+    <div class="space-y-1">
+        <a href="{% url 'subject_head_chat' %}"
+            class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all duration-300">
+            <i class="fa-solid fa-comments"></i>
+            <span class="font-bold text-sm tracking-wide antialiased">Eduke Chat</span>
+        </a>
+        
+        <a href="{% url 'subject_head_profile' %}"
+            class="nav-item-link flex items-center gap-3 px-6 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all duration-300">
+            <i class="fa-solid fa-circle-user"></i>
+            <span class="font-bold text-sm tracking-wide antialiased">Profile</span>
+        </a>
+    </div>
+</div>
+        </nav>
+
+        <div class="p-4 mt-auto">
+          <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3">
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 shadow-lg font-black text-white uppercase">
+                {{ subject_head_name|slice:":1" }}</div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-[11px] font-black text-white truncate uppercase">{{ subject_head_name }}</h4>
+                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Subject Head</p>
+              </div>
+            </div>
+            <a href="{% url 'logout' %}"
+              class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 hover:text-white transition-all">
+              <span class="text-[9px] font-black uppercase tracking-widest">Logout</span>
+              <i class="fa-solid fa-power-off text-[10px]"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+
+    <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+      <header class="h-24 flex items-center justify-between px-8 shrink-0">
+        <a href="{% url 'subject_head_subjects' %}" class="group flex items-center gap-3 px-4 py-2 rounded-xl glass-card border border-brand-500/20 hover:bg-brand-500 hover:text-white transition-all duration-300">
+            <i class="fa-solid fa-chevron-left text-[10px] group-hover:-translate-x-1 transition-transform"></i>
+            <span class="text-[10px] font-black uppercase tracking-widest">Back</span>
+        </a>
+        <div class="flex items-center gap-6">
+          <button id="hamburger-button" class="lg:hidden w-12 h-12 flex items-center justify-center rounded-2xl glass-card text-brand-600 shadow-lg"><i class="fas fa-bars"></i></button>
+          <h2 class="text-2xl lg:text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic">Quiz <span class="text-brand-500">Constructor</span></h2>
+        </div>
+        <div class="flex items-center gap-4">
+          {% include 'subject_head/_notification_bell.html' %}
+          <button id="theme-switch" class="w-12 h-12 rounded-2xl glass-card flex items-center justify-center hover:scale-110 transition-transform">
+            <i id="theme-icon" class="fa-solid fa-moon text-brand-600 text-lg"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="flex-1 overflow-y-auto px-4 lg:px-8 pb-12 space-y-8 custom-scroll">
+        
+        <section class="glass-card group p-8 rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-white/5 relative overflow-hidden bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl">
+    <div class="absolute -right-4 -top-4 w-40 h-40 bg-brand-500/10 rounded-full blur-[60px] group-hover:bg-brand-500/20 transition-colors duration-700"></div>
+    <div class="absolute -left-10 -bottom-10 w-40 h-40 bg-indigo-500/5 rounded-full blur-[60px]"></div>
+    
+    <div class="absolute inset-0 opacity-[0.03] dark:opacity-[0.07] pointer-events-none" 
+         style="background-image: linear-gradient(0deg, transparent 0%, #3b82f6 50%, transparent 100%); background-size: 100% 4px; animation: scan 3s linear infinite;">
+    </div>
+
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
+        <div class="space-y-3">
+            <div class="flex items-center gap-2 mb-1">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span class="text-[9px] font-black tracking-[0.3em] text-emerald-600 dark:text-emerald-400 uppercase opacity-80">System Live</span>
+            </div>
+
+            <div>
+                <h3 class="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">
+                    Knowledge <span class="text-brand-600 dark:text-brand-400 italic">Node</span>
+                </h3>
+                <p class="text-slate-500 dark:text-slate-400 text-sm font-medium mt-2 max-w-md leading-relaxed">
+                    Deploy instant-sync assessments. All nodes will be broadcasted to active student portals in <span class="text-slate-800 dark:text-slate-200 font-bold">real-time</span>.
+                </p>
+            </div>
+        </div>
+
+        <div class="shrink-0">
+            <button onclick="toggleQuizForm()" 
+                class="relative group/btn overflow-hidden bg-slate-900 dark:bg-brand-600 text-white font-black text-[11px] uppercase tracking-[0.2em] px-10 py-5 rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_-5px_rgba(var(--brand-rgb),0.5)] active:scale-95 flex items-center gap-3">
+                <div class="absolute inset-0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-500 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                
+                <i class="fa-solid fa-bolt-lightning text-brand-400 group-hover:rotate-12 transition-transform"></i>
+                <span>Initialize Form</span>
+            </button>
+        </div>
+    </div>
+</section>
+
+
+
+        <div id="quizForm" class="hidden animate-in fade-in slide-in-from-top-6 duration-700 relative">
+    <div class="glass-card p-1 md:p-10 rounded-[3rem] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border border-white/40 dark:border-white/10 bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl relative overflow-hidden">
+        <form id="quizFormSubmit" class="space-y-10">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 p-2">
+                <div class="lg:col-span-2 space-y-2">
+                    <label class="mono text-[10px] font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400 flex items-center gap-2">
+                        <i class="fa-solid fa-signature"></i> Quiz_Label
+                    </label>
+                    <input type="text" id="quiz_name" name="quiz_name" 
+                        class="w-full bg-white/50 dark:bg-slate-950/50 border-2 border-slate-200 dark:border-white/5 rounded-2xl py-4 px-6 text-lg font-bold focus:ring-4 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none placeholder:opacity-30" 
+                        placeholder="e.g., QUANTUM PHYSICS MIDTERM_01" required>
+                </div>
+                <div class="space-y-2">
+                    <label class="mono text-[10px] font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400 flex items-center gap-2">
+                        <i class="fa-solid fa-server"></i> Target_Class
+                    </label>
+                    <select id="class_id" name="class_id" 
+                        class="w-full bg-white/50 dark:bg-slate-950/50 border-2 border-slate-200 dark:border-white/5 rounded-2xl py-4 px-6 font-bold cursor-pointer focus:ring-4 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none appearance-none" required>
+                        <option value="" selected hidden>Select Registry...</option>
+                        {% for class in classes %}
+                            <option value="{{ class.0 }}">{{ class.1 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div id="questionsContainer" class="space-y-8">
+                <div class="flex items-center gap-6">
+                    <div class="h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-white/20 to-transparent flex-1"></div>
+                    <span class="mono text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 bg-slate-100 dark:bg-slate-800 px-4 py-1 rounded-full">Question_Matrix</span>
+                    <div class="h-px bg-gradient-to-r from-transparent via-slate-300 dark:via-white/20 to-transparent flex-1"></div>
+                </div>
+
+                <div class="question-block relative group/q glass-card p-8 rounded-[2.5rem] border border-slate-200/50 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 hover:border-brand-500/30 transition-all">
+                    
+                    <div class="flex justify-between items-center mb-6">
+                        <label class="mono text-[10px] font-black uppercase text-brand-500 flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-lg bg-brand-500 text-white flex items-center justify-center text-[8px]">01</span>
+                            Input_Command
+                        </label>
+                        <button type="button" 
+                            class="opacity-0 group-hover/q:opacity-100 text-slate-400 hover:text-red-500 transition-all text-[10px] font-black tracking-widest uppercase">
+                            <i class="fa-solid fa-trash-can mr-1"></i> Purge_Node
+                        </button>
+                    </div>
+
+                    <div class="space-y-6">
+                        <textarea rows="2" class="w-full bg-white dark:bg-slate-950 border-2 border-slate-100 dark:border-white/5 rounded-2xl p-5 font-bold text-slate-800 dark:text-white focus:border-brand-500 transition-all outline-none resize-none" 
+                            placeholder="Enter question data here..." required></textarea>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% for letter in 'ABCD'|make_list %}
+                            <div class="relative group/opt">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md bg-slate-100 dark:bg-white/10 flex items-center justify-center text-[10px] font-black text-brand-500 group-focus-within/opt:bg-brand-500 group-focus-within/opt:text-white transition-all">
+                                    {{ letter }}
+                                </span>
+                                <input type="text" name="option_{{ letter|lower }}" 
+                                    class="w-full bg-white dark:bg-slate-950 border-2 border-slate-100 dark:border-white/5 rounded-xl py-3 pl-12 pr-4 text-sm font-medium focus:border-brand-500 transition-all outline-none" 
+                                    placeholder="Option {{ letter }} data..." required>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="flex items-center gap-4 pt-2">
+                            <div class="w-full md:w-1/3">
+                                <label class="mono text-[9px] font-black uppercase text-slate-400 mb-2 block ml-1">Verification_Key</label>
+                                <select class="w-full bg-brand-500/5 dark:bg-brand-500/10 border-2 border-brand-500/20 rounded-xl py-3 px-4 font-black text-brand-600 dark:text-brand-400 outline-none cursor-pointer">
+                                    <option value="A">SET KEY: OPTION A</option>
+                                    <option value="B">SET KEY: OPTION B</option>
+                                    <option value="C">SET KEY: OPTION C</option>
+                                    <option value="D">SET KEY: OPTION D</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-5 pt-6">
+                <button type="button" onclick="addQuestion()" 
+                    class="flex-1 py-5 rounded-2xl border-2 border-dashed border-brand-500/40 text-brand-600 dark:text-brand-400 font-black text-[11px] uppercase tracking-[0.3em] hover:bg-brand-500 hover:text-white hover:border-solid hover:shadow-lg hover:shadow-brand-500/20 transition-all">
+                    <i class="fa-solid fa-plus-circle mr-2"></i> Append Question Node
+                </button>
+                <button type="submit" id="submitBtn" 
+                    class="flex-1 py-5 rounded-2xl bg-slate-900 dark:bg-brand-600 text-white font-black text-[11px] uppercase tracking-[0.3em] hover:bg-black dark:hover:bg-brand-700 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] hover:-translate-y-1 active:scale-95 transition-all">
+                    Commit & Deploy to Network
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+        <section class="space-y-8">
+    <div class="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-4">
+        <h3 class="mono text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-3">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-brand-600"></span>
+            </span>
+            Active_Registry_Broadcasting
+        </h3>
+        <span class="text-[9px] font-bold text-slate-400 opacity-50 uppercase tracking-widest">Nodes_Sync: Online</span>
+    </div>
+    
+    <div id="quizList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for quiz in quizzes %}
+        <div class="glass-card group relative p-0 rounded-[2rem] border border-slate-200 dark:border-white/10 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(var(--brand-rgb),0.3)]">
+            
+            <div class="absolute inset-0 opacity-[0.02] pointer-events-none bg-gradient-to-b from-brand-500 via-transparent to-transparent h-[200%] animate-[scan_8s_linear_infinite]"></div>
+
+            <div class="p-6 relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="mono text-[9px] font-black text-brand-600 dark:text-brand-400 bg-brand-500/10 px-2 py-1 rounded-md">
+                        NODE_ID: {{ quiz.0|truncatechars:8 }}
+                    </span>
+                    <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">
+                            <span class="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></span>
+                            <span class="text-[8px] font-black text-emerald-600 uppercase">Live</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-start justify-between gap-4 mb-6">
+                    <div>
+                        <span class="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Stream_Header</span>
+                        <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-tight group-hover:text-brand-600 transition-colors">
+                            {{ quiz.1 }}
+                        </h3>
+                    </div>
+
+                    <div class="flex gap-1">
+                        <a href="{% url 'edit_quiz' quiz.0 %}" 
+                            class="opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 bg-white dark:bg-slate-800 shadow-xl hover:bg-brand-600 hover:text-white w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 dark:border-white/10 text-slate-500">
+                            <i class="fa-solid fa-pen-to-square text-[10px]"></i>
+                        </a>
+                        <form action="{% url 'delete_quiz' quiz.0 %}" method="POST" onsubmit="return confirm('CRITICAL: Purge this Node Registry?');">
+                            {% csrf_token %}
+                            <button type="submit" 
+                                class="opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 transition-all duration-300 delay-75 bg-white dark:bg-slate-800 shadow-xl hover:bg-red-500 hover:text-white w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 dark:border-white/10 text-slate-500"> 
+                                <i class="fa-solid fa-trash-can text-[10px]"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 pt-4 border-t border-slate-100 dark:border-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-brand-500 transition-colors">
+                            <i class="fa-solid fa-users text-xs"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Total Students</span>
+                            <span class="text-[10px] font-bold text-slate-700 dark:text-slate-200">{{ quiz.4 }}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500 group-hover:text-brand-500 transition-colors">
+                            <i class="fa-solid fa-clipboard-check text-xs"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Attended</span>
+                            <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{{ quiz.5 }}/{{ quiz.4 }}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-brand-500 transition-colors">
+                            <i class="fa-solid fa-database text-xs"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Questions</span>
+                            <span class="text-[10px] font-bold text-slate-700 dark:text-slate-200">{{ quiz.3 }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <i class="fa-solid fa-satellite-dish absolute right-[-5px] bottom-[-5px] text-5xl opacity-[0.03] group-hover:opacity-[0.1] group-hover:scale-110 group-hover:-rotate-12 transition-all duration-1000"></i>
+        </div>
+        {% empty %}
+        <div class="col-span-full py-24 text-center glass-card rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/5">
+            <div class="relative inline-block mb-4">
+                <i class="fa-solid fa-radio text-4xl text-slate-200 dark:text-slate-800"></i>
+                <div class="absolute inset-0 animate-ping bg-slate-200 dark:bg-slate-800 rounded-full opacity-20"></div>
+            </div>
+            <p class="text-slate-400 font-black uppercase tracking-[0.3em] text-[10px]">Registry Empty: Signal Lost</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // System Visuals
+    window.addEventListener('mousemove', e => {
+      document.getElementById('spotlight').style.setProperty('--x', `${e.clientX}px`);
+      document.getElementById('spotlight').style.setProperty('--y', `${e.clientY}px`);
+    });
+
+    function toggleQuizForm() {
+      document.getElementById("quizForm").classList.toggle("hidden");
+    }
+
+    function addQuestion() {
+    const container = document.getElementById("questionsContainer");
+    // Calculate count based on current blocks to keep numbering sequential
+    const count = document.querySelectorAll('.question-block').length + 1;
+    const nodeID = count.toString().padStart(2, '0');
+
+    const html = `
+        <div class="question-block relative group/q glass-card p-8 rounded-[2.5rem] border border-slate-200/50 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 hover:border-brand-500/30 transition-all animate-in slide-in-from-top-4 duration-500 mt-6">
+            
+            <div class="flex justify-between items-center mb-6">
+                <label class="mono text-[10px] font-black uppercase text-brand-500 flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-lg bg-brand-500 text-white flex items-center justify-center text-[8px]">${nodeID}</span>
+                    Input_Command
+                </label>
+                <button type="button" 
+                    onclick="this.closest('.question-block').remove()" 
+                    class="opacity-0 group-hover/q:opacity-100 text-slate-400 hover:text-red-500 transition-all text-[10px] font-black tracking-widest uppercase">
+                    <i class="fa-solid fa-trash-can mr-1"></i> Purge_Node
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <textarea rows="2" name="question_text"
+                    class="w-full bg-white dark:bg-slate-950 border-2 border-slate-100 dark:border-white/5 rounded-2xl p-5 font-bold text-slate-800 dark:text-white focus:border-brand-500 transition-all outline-none resize-none" 
+                    placeholder="Enter question data for node ${nodeID}..." required></textarea>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="relative group/opt">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md bg-slate-100 dark:bg-white/10 flex items-center justify-center text-[10px] font-black text-brand-500 group-focus-within/opt:bg-brand-500 group-focus-within/opt:text-white transition-all">A</span>
+                        <input type="text" name="option_a" 
+                            class="w-full bg-white dark:bg-slate-950 border-2 border-slate-100 dark:border-white/5 rounded-xl py-3 pl-12 pr-4 text-sm font-medium focus:border-brand-500 transition-all outline-none" 
+                            placeholder="Data Point A" required>
+                    </div>
+                    <div class="relative group/opt">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md bg-slate-100 dark:bg-white/10 flex items-center justify-center text-[10px] font-black text-brand-500 group-focus-within/opt:bg-brand-500 group-focus-within/opt:text-white transition-all">B</span>
+                        <input type="text" name="option_b" 
+                            class="w-full bg-white dark:bg-slate-950 border-2 border-slate-100 dark:border-white/5 rounded-xl py-3 pl-12 pr-4 text-sm font-medium focus:border-brand-500 transition-all outline-none" 
+                            placeholder="Data Point B" required>
+                    </div>
+                    <div class="relative group/opt">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md bg-slate-100 dark:bg-white/10 flex items-center justify-center text-[10px] font-black text-brand-500 group-focus-within/opt:bg-brand-500 group-focus-within/opt:text-white transition-all">C</span>
+                        <input type="text" name="option_c" 
+                            class="w-full bg-white dark:bg-slate-950 border-2 border-slate-100 dark:border-white/5 rounded-xl py-3 pl-12 pr-4 text-sm font-medium focus:border-brand-500 transition-all outline-none" 
+                            placeholder="Data Point C" required>
+                    </div>
+                    <div class="relative group/opt">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md bg-slate-100 dark:bg-white/10 flex items-center justify-center text-[10px] font-black text-brand-500 group-focus-within/opt:bg-brand-500 group-focus-within/opt:text-white transition-all">D</span>
+                        <input type="text" name="option_d" 
+                            class="w-full bg-white dark:bg-slate-950 border-2 border-slate-100 dark:border-white/5 rounded-xl py-3 pl-12 pr-4 text-sm font-medium focus:border-brand-500 transition-all outline-none" 
+                            placeholder="Data Point D" required>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 pt-2">
+                    <div class="w-full md:w-1/3">
+                        <label class="mono text-[9px] font-black uppercase text-slate-400 mb-2 block ml-1">Verification_Key</label>
+                        <select name="correct_option" class="w-full bg-brand-500/5 dark:bg-brand-500/10 border-2 border-brand-500/20 rounded-xl py-3 px-4 font-black text-brand-600 dark:text-brand-400 outline-none cursor-pointer">
+                            <option value="A">SET KEY: OPTION A</option>
+                            <option value="B">SET KEY: OPTION B</option>
+                            <option value="C">SET KEY: OPTION C</option>
+                            <option value="D">SET KEY: OPTION D</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    
+    container.insertAdjacentHTML("beforeend", html);
+}
+
+    document.getElementById("quizFormSubmit").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const submitBtn = document.getElementById("submitBtn");
+      const originalText = submitBtn.innerHTML;
+      
+      // Show sync overlay
+      const syncOverlay = document.getElementById("sync-overlay");
+      const syncProgress = document.getElementById("sync-progress");
+      const syncStatus = document.getElementById("sync-status");
+      
+      syncOverlay.classList.remove("hidden");
+      syncOverlay.style.display = "flex";
+      
+      // Simulate progress
+      let progress = 0;
+      const stages = [
+        "Validating Node Data...",
+        "Encrypting Quiz Package...",
+        "Broadcasting to Network...",
+        "Syncing Student Terminals...",
+        "Finalizing Deployment..."
+      ];
+      
+      const progressInterval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress > 100) progress = 100;
+        syncProgress.style.width = `${progress}%`;
+        
+        const stageIndex = Math.min(Math.floor(progress / 20), stages.length - 1);
+        syncStatus.textContent = stages[stageIndex];
+      }, 300);
+      
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin mr-2"></i> SYNCHRONIZING...`;
+
+      const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+      const quizName = document.getElementById("quiz_name").value;
+      const classId = document.getElementById("class_id").value;
+      
+      let questions = [];
+      document.querySelectorAll(".question-block").forEach((block) => {
+          const inputs = block.querySelectorAll("input[type='text']");
+          questions.push({
+              question: block.querySelector("textarea").value,
+              option_a: inputs[0].value,
+              option_b: inputs[1].value,
+              option_c: inputs[2].value,
+              option_d: inputs[3].value,
+              correct_option: block.querySelector("select").value
+          });
+      });
+
+      try {
+        const response = await fetch("{% url 'subject_head_quiz' %}", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": csrftoken },
+          body: JSON.stringify({ action: "create_quiz", quiz_name: quizName, class_id: classId, questions: questions }),
+        });
+
+        clearInterval(progressInterval);
+        syncProgress.style.width = "100%";
+        
+        if (response.ok) {
+          // Show success message at center
+          syncStatus.textContent = "✓ NODE REGISTRY SYNCHRONIZED SUCCESSFULLY";
+          syncStatus.classList.add("text-emerald-400", "font-black", "text-base");
+          
+          setTimeout(() => {
+            syncOverlay.classList.add("animate-out", "fade-out");
+            setTimeout(() => {
+              syncOverlay.style.display = "none";
+              syncOverlay.classList.remove("animate-out", "fade-out");
+              syncStatus.classList.remove("text-emerald-400", "font-black", "text-base");
+              // Reset form and hide it
+              document.getElementById("quizFormSubmit").reset();
+              document.querySelectorAll(".question-block").forEach((block, index) => {
+                if (index > 0) block.remove();
+              });
+              // Reset submit button
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = originalText;
+              // Hide the quiz form
+              document.getElementById("quizForm").classList.add("hidden");
+              window.location.reload();
+            }, 700);
+          }, 1500);
+        } else {
+          throw new Error("Sync Failed");
+        }
+      } catch (e) {
+        clearInterval(progressInterval);
+        syncOverlay.classList.add("animate-out", "fade-out");
+        setTimeout(() => {
+          syncOverlay.style.display = "none";
+          syncOverlay.classList.remove("animate-out", "fade-out");
+        }, 500);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
+    });
+
+
+
+    // Menu Controls
+    const hamBtn = document.getElementById('hamburger-button');
+    const sidebar = document.getElementById('sidebar');
+    const closeBtn = document.getElementById('close-sidebar');
+    hamBtn.onclick = () => sidebar.classList.remove('-translate-x-full');
+    closeBtn.onclick = () => sidebar.classList.add('-translate-x-full');
+
+    document.getElementById('theme-switch').onclick = () => {
+      document.documentElement.classList.toggle('dark');
+      const isDark = document.documentElement.classList.contains('dark');
+      localStorage.theme = isDark ? 'dark' : 'light';
+      document.getElementById('theme-icon').className = isDark ? 'fa-solid fa-sun text-yellow-400 text-lg' : 'fa-solid fa-moon text-brand-600 text-lg';
+    };
+  </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-link.active');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+</html>

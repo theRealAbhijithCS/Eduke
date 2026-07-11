@@ -1,0 +1,671 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduke | Performance Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+                        accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b', emerald: '#10b981' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            transition: background-color 0.5s ease;
+        }
+
+        .dark body {
+            background-color: #020617;
+        }
+
+        #spotlight {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.15) 0%, transparent 45%);
+            z-index: 1;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.4;
+            z-index: 0;
+            animation: float 20s infinite alternate;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(100px, 50px);
+            }
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item-active {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            color: white !important;
+        }
+
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-sidebar {
+            background: rgba(10, 10, 20, 0.98);
+            backdrop-filter: blur(40px);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(139, 92, 246, 0.3);
+            border-radius: 10px;
+        }
+
+        @keyframes scan-vertical {
+            0% {
+                top: 0%;
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                top: 100%;
+                opacity: 0;
+            }
+        }
+
+        .animate-scan-vertical {
+            animation: scan-vertical 2s infinite linear;
+        }
+    </style>
+</head>
+
+<body class="antialiased">
+    <div id="spotlight"></div>
+    <div class="orb w-96 h-96 bg-brand-500/10 top-0 left-0"></div>
+    <div class="orb w-80 h-80 bg-blue-500/10 bottom-0 right-0"></div>
+
+    <div class="relative z-10 flex h-screen overflow-hidden lg:p-6">
+
+        <aside id="sidebar"
+            class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 h-full shrink-0">
+            <div class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden">
+
+                <div class="p-8 pb-4 flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 shadow-lg">
+                        <img src="{% static 'main/images/logobase_white.png' %}" class="w-6 h-6">
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-black text-white uppercase italic tracking-tighter">Eduke<span
+                                class="text-accent-fuchsia">.</span></h2>
+                        <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Parent Portal</p>
+                    </div>
+                </div>
+
+                <nav class="flex-grow px-4 mt-6 space-y-6 overflow-y-auto custom-scroll py-4">
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">Command</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'parent_dashboard' %}"
+                                class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+
+                                <i class="fa-solid fa-layer-group text-base-400"></i>
+                                <span class="font-bold text-sm">Dashboard</span>
+                            </a>
+                            <a href="{% url 'parent_class' %}"
+                                class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-chalkboard"></i>
+                                <span class="font-bold text-sm">Your Class</span>
+                            </a>
+                            <a href="{% url 'parent_teacher_profile' %}"
+                                class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-chalkboard-user"></i>
+                                <span class="font-bold text-sm">Your Teacher</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">Analytics
+                        </p>
+                        <div class="space-y-1">
+                            <a href="{% url 'parent_evaluation' %}"
+                                class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-square-poll-vertical"></i>
+                                <span class="font-bold text-sm">Evaluation</span>
+                            </a>
+                            <a href="{% url 'parent_student_performance' %}"
+                                class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 nav-item-active">
+                                <span
+                                    class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>
+                                <i class="fa-solid fa-chart-line text-brand-400"></i>
+                                <span class="font-bold text-sm">Performance</span>
+                            </a>
+                            <a href="{% url 'parent_prediction' %}"
+                                class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-fire-flame-curved"></i>
+                                <span class="font-bold text-sm">Score Prediction</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">Comms</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'parent_eduke_bot' %}"
+                                class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-robot"></i>
+                                <span class="font-bold text-sm">Eduke Bot</span>
+                            </a>
+                            <a href="{% url 'parent_chat' %}"
+                                class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-comments"></i>
+                                <span class="font-bold text-sm">Eduke Chat</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">User</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'parent_profile' %}"
+                                class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-circle-user"></i>
+                                <span class="font-bold text-sm">Profile Settings</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+
+                <div class="p-4 shrink-0 mt-auto mb-2 lg:mb-4">
+                    <div
+                        class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3 transition-all hover:border-white/20">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 font-black text-white text-xs">
+                                {{ parent_name|slice:":1"|default:"P" }}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="text-[11px] font-black text-white truncate uppercase">{% if parent_name %}
+                                    {{ parent_name }}
+                                    {% else %}
+                                    Parent of {{ student_name|truncatewords:1|cut:"..."|cut:"…" }}
+                                    {% endif %}</h4>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none">
+                                    Parent</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'logout' %}"
+                            class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 transition-all duration-300">
+                            <span
+                                class="text-[9px] font-black uppercase tracking-widest group-hover/btn:text-white">Logout</span>
+                            <i
+                                class="fa-solid fa-power-off text-[10px] group-hover/btn:text-white transition-colors"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <header class="h-20 flex items-center justify-between px-8 shrink-0 relative z-20">
+                <div class="flex items-center gap-4">
+                    <button id="hamburger-button"
+                        class="lg:hidden w-10 h-10 glass-card rounded-xl flex items-center justify-center text-brand-600">
+                        <i class="fa-solid fa-bars-staggered"></i>
+                    </button>
+                    <h1 class="text-xl font-black dark:text-white uppercase tracking-tighter leading-none">Performance
+                        <span class="text-brand-500 italic">Protocol</span></h1>
+                </div>
+                <div class="relative flex items-center gap-4">
+                    {% include 'parents/_notification_bell.html' %}
+                    <button id="theme-switch"
+                        class="w-12 h-12 glass-card rounded-2xl flex items-center justify-center text-brand-600 dark:text-amber-400 hover:scale-110 transition-transform shadow-lg">
+                        <i id="theme-icon" class="fa-solid fa-moon"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div id="content-wrapper"
+                class="flex-1 overflow-y-auto px-4 lg:px-10 pb-12 space-y-10 custom-scroll relative z-10">
+
+                <section
+                    class="group relative overflow-hidden rounded-[4rem] bg-white/40 dark:bg-slate-950/70 p-12 backdrop-blur-3xl border border-white/20 dark:border-white/5 shadow-2xl transition-all duration-1000">
+
+                    <div
+                        class="absolute inset-0 opacity-[0.05] pointer-events-none bg-[radial-gradient(#6366f1_1.5px,transparent_1.5px)] [background-size:32px_32px]">
+                    </div>
+
+                    <div class="absolute top-6 left-6 w-8 h-8 border-t-2 border-l-2 border-brand-500/30 rounded-tl-xl">
+                    </div>
+                    <div
+                        class="absolute bottom-6 right-6 w-8 h-8 border-b-2 border-r-2 border-brand-500/30 rounded-br-xl">
+                    </div>
+
+                    <div class="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-12">
+
+                        <div class="relative">
+                            <div
+                                class="absolute -inset-6 border-2 border-dashed border-brand-500/20 rounded-full animate-[spin_20s_linear_infinite] group-hover:border-brand-500/50">
+                            </div>
+
+                            <div
+                                class="relative w-40 h-40 rounded-[3rem] bg-slate-950 dark:bg-white flex items-center justify-center shadow-[0_0_50px_rgba(99,102,241,0.2)] transition-all duration-700 group-hover:scale-105 group-hover:-rotate-2 group-hover:shadow-brand-500/40 overflow-hidden">
+                                <span class="text-6xl font-black text-white dark:text-slate-950 tracking-tighter">{{ student.name|slice:":1" }}</span>
+                                <div
+                                    class="absolute inset-0 w-full h-[2px] bg-brand-400/50 shadow-[0_0_15px_#6366f1] top-0 group-hover:animate-scan-vertical pointer-events-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center lg:text-left flex-1">
+                            <div
+                                class="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-brand-500/10 border border-brand-500/20 mb-6">
+                                <span class="h-1.5 w-1.5 rounded-full bg-brand-500 animate-pulse"></span>
+                                <span
+                                    class="text-[9px] font-black uppercase tracking-[0.4em] text-brand-600 dark:text-brand-400">Node
+                                    Identified</span>
+                            </div>
+
+                            <h2
+                                class="text-5xl md:text-7xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none italic mb-8 drop-shadow-sm">
+                                {{ student.name }}
+                            </h2>
+
+                            <div class="flex flex-wrap justify-center lg:justify-start gap-4">
+                                <div
+                                    class="flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm">
+                                    <span
+                                        class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Reg</span>
+                                    <span
+                                        class="text-sm font-black text-slate-800 dark:text-white font-mono tracking-tighter">{{ student.roll_no }}</span>
+                                </div>
+                                <div
+                                    class="flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm">
+                                    <span
+                                        class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Sec</span>
+                                    <span class="text-sm font-black text-slate-800 dark:text-white uppercase">{{ student.class_name }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 lg:flex lg:flex-col gap-4 p-2">
+                            <div
+                                class="w-16 h-16 rounded-[1.5rem] bg-emerald-500/5 border border-emerald-500/20 flex items-center justify-center text-emerald-500 transition-all hover:bg-emerald-500 hover:text-white hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]">
+                                <i class="fa-solid fa-shield-halved text-2xl"></i>
+                            </div>
+                            <div
+                                class="w-16 h-16 rounded-[1.5rem] bg-brand-500/5 border border-brand-500/20 flex items-center justify-center text-brand-500 transition-all hover:bg-brand-500 hover:text-white hover:shadow-[0_0_20px_rgba(99,102,241,0.4)]">
+                                <i class="fa-solid fa-microchip text-2xl"></i>
+                            </div>
+                            <div
+                                class="w-16 h-16 rounded-[1.5rem] bg-fuchsia-500/5 border border-fuchsia-500/20 flex items-center justify-center text-fuchsia-500 transition-all hover:bg-fuchsia-500 hover:text-white hover:shadow-[0_0_20px_rgba(217,70,239,0.4)]">
+                                <i class="fa-solid fa-atom text-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+
+                <div class="glass-card relative overflow-hidden rounded-[3rem] p-1.5 shadow-2xl transition-all duration-500 hover:shadow-brand-500/10">
+    <div class="absolute -left-10 -top-10 h-32 w-32 rounded-full bg-brand-500/5 blur-3xl pointer-events-none"></div>
+    
+    <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 bg-white/40 dark:bg-slate-900/40 p-8 rounded-[2.8rem] backdrop-blur-xl border border-white/20 dark:border-white/5">
+        
+        <div class="flex items-center gap-5">
+            <div class="relative">
+                <div class="absolute inset-0 bg-brand-500/20 rounded-2xl animate-ping opacity-20"></div>
+                <div class="relative w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-brand-400 shadow-xl border border-white/5">
+                    <i class="fa-solid fa-book-bookmark text-lg"></i>
+                </div>
+            </div>
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="h-1 w-1 rounded-full bg-brand-500"></span>
+                    <p class="text-[9px] font-black text-brand-500 uppercase tracking-[0.4em]">Input Required</p>
+                </div>
+                <h3 class="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter italic">
+                    Subject <span class="text-brand-500">Node</span> Selection
+                </h3>
+            </div>
+        </div>
+
+        <form method="GET" action="{% url 'parent_student_performance' %}" class="w-full md:w-auto group">
+            <div class="relative flex items-center">
+                <div class="absolute left-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-200 dark:border-white/10 pr-4 pointer-events-none">
+                    Node_ID
+                </div>
+                
+                <select name="subject_id" 
+                    class="w-full md:w-80 pl-24 pr-12 py-5 bg-white dark:bg-slate-950 dark:text-white border-2 border-slate-100 dark:border-white/5 rounded-[1.8rem] text-[11px] font-black uppercase tracking-[0.15em] focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/5 transition-all appearance-none cursor-pointer shadow-sm group-hover:shadow-md"
+                    onchange="this.form.submit()">
+                    
+                    <option value="" selected hidden>Protocol Selection...</option>
+                    {% for subject in subjects %}
+                    <option value="{{ subject.id }}" {% if subject.id == selected_subject_id %}selected{% endif %} class="dark:bg-slate-900">
+                        {{ subject.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <div class="absolute right-6 flex items-center pointer-events-none">
+                    <div class="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mr-4"></div>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-brand-500 group-hover:translate-y-0.5 transition-transform"></i>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+    
+    <div class="group glass-card relative p-10 rounded-[3rem] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(99,102,241,0.1)] overflow-hidden border border-white/20 dark:border-white/5">
+        <div class="absolute -right-6 -top-6 w-32 h-32 bg-brand-500/10 rounded-full blur-3xl transition-all group-hover:bg-brand-500/20"></div>
+        
+        <div class="relative z-10 flex flex-col items-center text-center">
+            <div class="w-14 h-14 rounded-2xl bg-brand-500/10 flex items-center justify-center text-brand-600 dark:text-brand-400 mb-6 border border-brand-500/20 shadow-inner">
+                <i class="fa-solid fa-graduation-cap text-xl"></i>
+            </div>
+            
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3">Academic Score</p>
+            
+            <h4 class="text-5xl font-black text-slate-900 dark:text-white tracking-tighter italic mb-6">
+                {{ evaluations.marks_percentage|default:"--" }}<span class="text-xl text-brand-500 ml-1">%</span>
+            </h4>
+
+            <div class="relative w-full h-3 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden border border-white/10 shadow-inner">
+                <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-brand-600 to-brand-400 rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+                     style="width: {{ evaluations.marks_percentage|default:0 }}%">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="group glass-card relative p-10 rounded-[3rem] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(79,70,229,0.1)] overflow-hidden border border-white/20 dark:border-white/5">
+        <div class="absolute -right-6 -top-6 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl transition-all group-hover:bg-indigo-500/20"></div>
+        
+        <div class="relative z-10 flex flex-col items-center text-center">
+            <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-6 border border-indigo-500/20 shadow-inner">
+                <i class="fa-solid fa-calendar-check text-xl"></i>
+            </div>
+            
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3">Attendance Ratio</p>
+            
+            <h4 class="text-5xl font-black text-slate-900 dark:text-white tracking-tighter italic mb-6">
+                {{ evaluations.attendance_percentage|default:"--" }}<span class="text-xl text-indigo-500 ml-1">%</span>
+            </h4>
+
+            <div class="relative w-full h-3 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden border border-white/10 shadow-inner">
+                <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(79,70,229,0.5)]"
+                     style="width: {{ evaluations.attendance_percentage|default:0 }}%">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="group glass-card relative p-10 rounded-[3rem] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(16,185,129,0.1)] overflow-hidden border border-white/20 dark:border-white/5">
+        <div class="absolute -right-6 -top-6 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl transition-all group-hover:bg-emerald-500/20"></div>
+        
+        <div class="relative z-10 flex flex-col items-center text-center">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-6 border border-emerald-500/20 shadow-inner">
+                <i class="fa-solid fa-bolt text-xl"></i>
+            </div>
+            
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3">Quiz Efficiency</p>
+            
+            <h4 class="text-5xl font-black text-slate-900 dark:text-white tracking-tighter italic mb-6">
+                {{ quiz_percentage }}<span class="text-xl text-emerald-500 ml-1">%</span>
+            </h4>
+
+            <div class="relative w-full h-3 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden border border-white/10 shadow-inner">
+                <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+                     style="width: {{ quiz_percentage|default:0 }}%">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-5 gap-10">
+
+    <div class="xl:col-span-3 group glass-card rounded-[3.5rem] p-10 flex flex-col h-full relative overflow-hidden border border-white/20 dark:border-white/5 shadow-2xl">
+        <div class="absolute top-0 right-0 p-8 flex gap-1.5 opacity-30">
+            <span class="h-1 w-1 rounded-full bg-brand-500 animate-pulse"></span>
+            <span class="h-1 w-4 rounded-full bg-slate-400"></span>
+        </div>
+        
+        <div class="flex items-center gap-4 mb-10">
+            <div class="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center text-brand-500">
+                <i class="fa-solid fa-chart-line text-sm"></i>
+            </div>
+            <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em]">Historical Performance Matrix</h3>
+        </div>
+
+        <div class="flex-1 min-h-[350px] relative">
+            <canvas id="performanceChart"></canvas>
+        </div>
+    </div>
+
+    <div class="xl:col-span-2 glass-card rounded-[3.5rem] p-10 relative overflow-hidden border border-white/20 dark:border-white/5 shadow-2xl bg-slate-900/5">
+        <div class="flex items-center gap-4 mb-10">
+            <div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                <i class="fa-solid fa-brain text-sm"></i>
+            </div>
+            <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em]">Behavioral Evaluations</h3>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="group/node p-6 rounded-[2.5rem] bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 transition-all hover:border-brand-500/50 shadow-sm hover:shadow-xl">
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Study Velocity</p>
+                <div class="flex items-baseline justify-between mb-4">
+                    <p class="text-3xl font-black text-slate-800 dark:text-white tracking-tighter italic">
+                        {{ evaluations.study_time_rating|default:"--" }}
+                    </p>
+                    <span class="text-[10px] font-bold text-brand-500 opacity-60">/ 10.0</span>
+                </div>
+                <div class="h-1 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                    <div class="h-full bg-brand-500 transition-all duration-1000 group-hover/node:bg-brand-400" 
+                         style="width: {{ evaluations.study_time_rating|default:0 }}0%"></div>
+                </div>
+            </div>
+
+            <div class="group/node p-6 rounded-[2.5rem] bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 transition-all hover:border-indigo-500/50 shadow-sm hover:shadow-xl">
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Sleep Cycle</p>
+                <div class="flex items-baseline justify-between mb-4">
+                    <p class="text-3xl font-black text-slate-800 dark:text-white tracking-tighter italic">
+                        {{ evaluations.sleep_time_rating|default:"--" }}
+                    </p>
+                    <span class="text-[10px] font-bold text-indigo-500 opacity-60">/ 10.0</span>
+                </div>
+                <div class="h-1 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                    <div class="h-full bg-indigo-500 transition-all duration-1000 group-hover/node:bg-indigo-400" 
+                         style="width: {{ evaluations.sleep_time_rating|default:0 }}0%"></div>
+                </div>
+            </div>
+
+            <div class="group/node p-6 rounded-[2.5rem] bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 transition-all hover:border-emerald-500/50 shadow-sm hover:shadow-xl">
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Engagement</p>
+                <div class="flex items-baseline justify-between mb-4">
+                    <p class="text-3xl font-black text-slate-800 dark:text-white tracking-tighter italic">
+                        {{ evaluations.class_participation_rating|default:"--" }}
+                    </p>
+                    <span class="text-[10px] font-bold text-emerald-500 opacity-60">/ 10.0</span>
+                </div>
+                <div class="h-1 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                    <div class="h-full bg-emerald-500 transition-all duration-1000 group-hover/node:bg-emerald-400" 
+                         style="width: {{ evaluations.class_participation_rating|default:0 }}0%"></div>
+                </div>
+            </div>
+
+            <div class="group/node p-6 rounded-[2.5rem] bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 transition-all hover:border-amber-500/50 shadow-sm hover:shadow-xl">
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Neural Activity</p>
+                <div class="flex items-baseline justify-between mb-4">
+                    <p class="text-3xl font-black text-slate-800 dark:text-white tracking-tighter italic">
+                        {{ evaluations.academic_activity_rating|default:"--" }}
+                    </p>
+                    <span class="text-[10px] font-bold text-amber-500 opacity-60">/ 10.0</span>
+                </div>
+                <div class="h-1 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                    <div class="h-full bg-amber-500 transition-all duration-1000 group-hover/node:bg-amber-400" 
+                         style="width: {{ evaluations.academic_activity_rating|default:0 }}0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+    <script>
+        // Spotlight Effect
+        document.addEventListener('mousemove', (e) => {
+            document.getElementById('spotlight').style.setProperty('--x', `${e.clientX}px`);
+            document.getElementById('spotlight').style.setProperty('--y', `${e.clientY}px`);
+        });
+
+        // Theme Toggle
+        const themeBtn = document.getElementById('theme-switch');
+        const themeIcon = document.getElementById('theme-icon');
+        
+        // Initialize theme icon based on current theme
+        if (document.documentElement.classList.contains('dark')) {
+            themeIcon.className = 'fa-solid fa-sun text-amber-400';
+        } else {
+            themeIcon.className = 'fa-solid fa-moon text-brand-600';
+        }
+        
+        themeBtn.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            themeIcon.className = isDark ? 'fa-solid fa-sun text-amber-400' : 'fa-solid fa-moon text-brand-600';
+            updateChartTheme(isDark);
+        });
+
+        // Sidebar Toggle
+        document.getElementById('hamburger-button').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+        });
+
+        // Chart Configuration
+        let performanceChart;
+        const graphLabels = ["Marks", "Attendance", "Study", "Sleep", "Particip.", "Activity", "Quiz"];
+        const graphData = JSON.parse("{{ graph_data|safe }}");
+
+        function initChart() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+
+            performanceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: graphLabels,
+                    datasets: [{
+                        label: 'Efficiency %',
+                        data: graphData,
+                        backgroundColor: '#8b5cf690',
+                        hoverBackgroundColor: '#8b5cf6',
+                        borderRadius: 12,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 100, grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateChartTheme(isDark) {
+            if (performanceChart) {
+                performanceChart.options.scales.y.grid.color = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+                performanceChart.update();
+            }
+        }
+
+        function printReport() {
+            window.print();
+        }
+
+        document.addEventListener('DOMContentLoaded', initChart);
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-active, .active, a[class*="bg-brand-500/10"][class*="text-white"], a[class*="bg-accent-fuchsia/10"][class*="text-white"], a[class*="bg-indigo-500/10"][class*="text-white"], a[class*="bg-emerald-500/10"][class*="text-white"]');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+
+</html>

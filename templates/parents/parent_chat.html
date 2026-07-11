@@ -1,0 +1,566 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduke | Comms Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+                        accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b', emerald: '#10b981' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        .dark body { background-color: #020617; }
+
+        #spotlight {
+            position: fixed; inset: 0; pointer-events: none;
+            background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.15) 0%, transparent 45%);
+            z-index: 1;
+        }
+
+        .orb { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.4; z-index: 0; animation: float 20s infinite alternate; }
+        @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(100px, 50px); } }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        .nav-item-active {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            color: white !important;
+        }   
+
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4);
+        }
+
+        .glass-sidebar {
+            background: rgba(10, 10, 20, 0.98);
+            backdrop-filter: blur(40px);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .chat-item:hover { transform: translateY(-5px); border-color: #8b5cf6; }
+
+        @keyframes scan {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+    
+
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.3); border-radius: 10px; }
+    </style>
+</head>
+
+<body class="antialiased">
+    <div id="spotlight"></div>
+    <div class="orb w-96 h-96 bg-brand-500/10 top-0 left-0"></div>
+    <div class="orb w-80 h-80 bg-fuchsia-500/10 bottom-0 right-0"></div>
+
+    <div class="relative z-10 flex h-screen overflow-hidden lg:p-6">
+        
+       <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 h-full shrink-0">
+            <div class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden">
+                
+                <div class="p-8 pb-4 flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 shadow-lg">
+                        <img src="{% static 'main/images/logobase_white.png' %}" class="w-6 h-6">
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-black text-white uppercase italic tracking-tighter">Eduke<span class="text-accent-fuchsia">.</span></h2>
+                        <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Parent Portal</p>
+                    </div>
+                </div>
+
+                <nav class="flex-grow px-4 mt-6 space-y-6 overflow-y-auto custom-scroll py-4">
+                    
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">Command</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'parent_dashboard' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                               
+                               <i class="fa-solid fa-layer-group text-base-400"></i>
+                                <span class="font-bold text-sm">Dashboard</span>
+                            </a>
+                            <a href="{% url 'parent_class' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-chalkboard"></i>
+                                <span class="font-bold text-sm">Your Class</span>
+                            </a>
+                            <a href="{% url 'parent_teacher_profile' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-chalkboard-user"></i>
+                                <span class="font-bold text-sm">Your Teacher</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">Analytics</p>
+                        <div class="space-y-1">
+                        <a href="{% url 'parent_evaluation' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-square-poll-vertical "></i>
+                                <span class="font-bold text-sm">Evaluation</span>
+                            </a>
+                            <a href="{% url 'parent_student_performance' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-chart-line "></i>
+                                <span class="font-bold text-sm">Performance</span>
+                            </a>
+                            <a href="{% url 'parent_prediction' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                        <i class="fa-solid fa-fire-flame-curved "></i>
+                        <span class="font-bold text-sm">Score Prediction</span>
+                    </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">Comms</p>
+                        <div class="space-y-1">
+                          <a href="{% url 'parent_eduke_bot' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-robot"></i>
+                                <span class="font-bold text-sm">Eduke Bot</span>
+                            </a>
+                            <a href="{% url 'parent_chat' %}" class="relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 nav-item-active">
+                                <span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>
+                                <i class="fa-solid fa-comments text-brand-400"></i>
+                        <span class="font-bold text-sm">Eduke Chat</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-3">User</p>
+                        <div>
+                        <div class="space-y-1">
+                            <a href="{% url 'parent_profile' %}" class="flex items-center gap-4 px-6 py-3 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+                                <i class="fa-solid fa-circle-user"></i>
+                                <span class="font-bold text-sm">Profile Settings</span>
+                            </a>
+                        </div>
+                    </div>
+                    </div>
+                </nav>
+
+                <div class="p-4 shrink-0 mt-auto mb-2 lg:mb-4">
+                    <div class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3 transition-all hover:border-white/20">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 font-black text-white text-xs">
+                                {{ parent_name|slice:":1"|default:"P" }}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="text-[11px] font-black text-white truncate uppercase">{% if parent_name %}
+                                    {{ parent_name }}
+                                    {% else %}
+                                    Parent of {{ student_name|truncatewords:1|cut:"..."|cut:"…" }}
+                                    {% endif %}</h4>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none">Parent</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'logout' %}" class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 transition-all duration-300">
+                            <span class="text-[9px] font-black uppercase tracking-widest group-hover/btn:text-white">Logout</span>
+                            <i class="fa-solid fa-power-off text-[10px] group-hover/btn:text-white transition-colors"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <header class="h-20 flex items-center justify-between px-8 shrink-0 relative z-20">
+                <div class="flex items-center gap-4">
+                    <button id="hamburger-button" class="lg:hidden w-10 h-10 glass-card rounded-xl flex items-center justify-center text-brand-600">
+                        <i class="fa-solid fa-bars-staggered"></i>
+                    </button>
+                    <h1 class="text-xl font-black dark:text-white uppercase tracking-tighter leading-none">Comms <span class="text-brand-500 italic">Link</span></h1>
+                </div>
+                <div class="relative flex items-center gap-4">
+                    {% include 'parents/_notification_bell.html' %}
+                    <button id="theme-switch" class="w-12 h-12 glass-card rounded-2xl flex items-center justify-center text-brand-600 dark:text-amber-400 hover:scale-110 transition-transform shadow-lg">
+                        <i id="theme-icon" class="fa-solid fa-moon"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div id="content-wrapper" class="flex-1 overflow-y-auto px-4 lg:px-10 pb-12 space-y-10 custom-scroll relative z-10">
+                
+                <section class="group relative overflow-hidden rounded-[3.5rem] bg-slate-950 p-12 shadow-[0_20px_50px_rgba(79,70,229,0.2)] transition-all duration-700">
+    
+    <div class="absolute inset-0 bg-gradient-to-br from-brand-600 via-indigo-900 to-slate-950 opacity-90"></div>
+    
+    <div class="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(99,102,241,0.05)_50%,transparent_100%)] bg-[length:100%_4px] animate-[pulse_2s_infinite] pointer-events-none"></div>
+
+    <div class="absolute inset-0 opacity-10 pointer-events-none" 
+         style="background-image: radial-gradient(#ffffff 0.5px, transparent 0.5px); background-size: 30px 30px;"></div>
+
+    <div class="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
+        
+        <div class="space-y-4">
+            <div class="flex items-center gap-3">
+                <div class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </div>
+                <span class="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-[0.3em] text-emerald-400 backdrop-blur-md">
+                    Transmission Live
+                </span>
+            </div>
+
+            <div>
+                <h2 class="text-5xl md:text-6xl font-black uppercase italic tracking-tighter leading-none text-white drop-shadow-2xl">
+                    Eduke <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-200 to-brand-500">Messenger</span>
+                </h2>
+                <div class="flex items-center gap-4 mt-4">
+                    <div class="h-[1px] w-12 bg-brand-400/50"></div>
+                    <p class="text-brand-100 font-bold uppercase text-[10px] tracking-[0.4em] opacity-80">
+                        Centralized Comms <span class="text-white/40">//</span> Node_04
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="hidden md:block text-right">
+            <div class="p-4 rounded-2xl bg-black/20 border border-white/5 backdrop-blur-md">
+                <p class="text-[8px] font-mono text-brand-300 uppercase mb-1">Encryption: AES-256</p>
+                <p class="text-[8px] font-mono text-brand-300 uppercase">Signal: Optimized</p>
+            </div>
+        </div>
+    </div>
+
+    <i class="fa-solid fa-tower-broadcast absolute -right-16 -bottom-16 text-[18rem] text-white opacity-[0.03] -rotate-12 transition-all duration-1000 group-hover:rotate-0 group-hover:scale-110 group-hover:opacity-[0.07] pointer-events-none"></i>
+    
+    <div class="absolute top-0 right-0 w-32 h-32 bg-brand-400/10 blur-[80px] rounded-full"></div>
+</section>
+
+                <div class="space-y-8">
+    <div class="flex items-center gap-6 mb-8">
+        <div class="flex items-center gap-3">
+            <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
+            </span>
+            <h3 class="text-[11px] font-black text-slate-500 dark:text-brand-400 uppercase tracking-[0.5em]">Active_Nodes</h3>
+        </div>
+        <div class="h-[1px] flex-1 bg-gradient-to-r from-brand-500/20 via-transparent to-transparent"></div>
+        {% if chat_users and suggested_users %}
+        <button id="toggle-suggested-btn" class="px-4 py-2 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-500 hover:bg-brand-500 hover:text-white transition-all duration-300 text-[9px] font-black uppercase tracking-widest">
+            <i class="fa-solid fa-chevron-down mr-2"></i>Show All Teachers
+        </button>
+        {% endif %}
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {% for user in chat_users %}
+        <a href="{% url 'parent_chat_user' user.0 %}" 
+           class="group relative overflow-hidden glass-card p-6 rounded-[2.8rem] flex items-center gap-5 transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(99,102,241,0.15)] border border-white/20 dark:border-white/5">
+            
+            <div class="absolute inset-0 bg-gradient-to-br from-brand-500/0 via-transparent to-brand-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+            <div class="relative shrink-0">
+                <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black text-white shadow-2xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3
+                    {% if user.2 == 'class_head' %} 
+                        bg-gradient-to-br from-indigo-600 to-brand-700 shadow-indigo-500/30
+                    {% else %} 
+                        bg-gradient-to-br from-slate-800 to-slate-950 dark:from-slate-700 dark:to-slate-900 shadow-black/20 
+                    {% endif %}">
+                    {{ user.1|first|upper }}
+                </div>
+                <div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-white dark:bg-slate-900 shadow-lg flex items-center justify-center border border-slate-100 dark:border-white/10">
+                    {% if user.2 == "class_head" %}
+                        <i class="fa-solid fa-crown text-[10px] text-amber-500"></i>
+                    {% else %}
+                        <i class="fa-solid fa-microchip text-[10px] text-brand-500"></i>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="min-w-0 relative z-10">
+                <h4 class="text-lg font-black text-slate-800 dark:text-white truncate tracking-tighter leading-tight group-hover:text-brand-600 transition-colors">
+                    {{ user.1 }}
+                </h4>
+                
+                <div class="flex items-center gap-3 mt-1">
+                    <div class="flex items-center gap-1.5">
+                        <span class="flex gap-0.5">
+                            <span class="w-1 h-3 rounded-full bg-emerald-500 group-hover:animate-[bounce_1s_infinite]"></span>
+                            <span class="w-1 h-3 rounded-full bg-emerald-500/40 group-hover:animate-[bounce_1.2s_infinite]"></span>
+                            <span class="w-1 h-3 rounded-full bg-emerald-500/20 group-hover:animate-[bounce_1.4s_infinite]"></span>
+                        </span>
+                        <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 group-hover:text-emerald-500 transition-colors">
+                            {% if user.2 == "class_head" %} Class_Lead {% else %} Sector_Head {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notification Badge -->
+            <div class="relative shrink-0">
+                <span data-user-id="{{ user.0 }}" class="notification-badge hidden min-w-[1.25rem] h-5 px-1.5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                    0
+                </span>
+                <div class="ml-auto opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-4 group-hover:translate-x-0">
+                    <i class="fa-solid fa-arrow-right-long text-brand-500"></i>
+                </div>
+            </div>
+        </a>
+        
+        {% empty %}
+        <div class="col-span-full py-20 text-center glass-card rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-white/5 relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-brand-500/5 to-transparent -translate-x-full animate-[scan_3s_infinite]"></div>
+            <i class="fa-solid fa-comments text-4xl text-slate-200 dark:text-white/10 mb-4 block"></i>
+            <p class="text-slate-400 font-black uppercase text-[10px] tracking-[0.5em] italic mb-2">No active transmissions detected</p>
+            <p class="text-slate-500 font-bold text-[9px] uppercase tracking-widest">Start a conversation below ↓</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+
+
+                <div class="space-y-8 mt-20 {% if chat_users %}hidden{% endif %}" id="suggested-users-section">
+    <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center gap-4">
+            <div class="relative">
+                <div class="w-3 h-3 rounded-sm bg-brand-500/20 rotate-45 animate-pulse"></div>
+                <div class="absolute inset-0 w-3 h-3 rounded-sm border border-brand-500 rotate-45"></div>
+            </div>
+            <h3 class="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.6em]">Node_Discovery_Protocol</h3>
+        </div>
+        {% if chat_users and suggested_users %}
+        <button id="hide-suggested-btn" class="px-4 py-2 rounded-xl bg-slate-200/10 border border-slate-300/10 text-slate-400 hover:bg-slate-500/10 hover:text-slate-300 transition-all duration-300 text-[9px] font-black uppercase tracking-widest">
+            <i class="fa-solid fa-chevron-up mr-2"></i>Collapse
+        </button>
+        {% endif %}
+        <div class="hidden md:flex gap-1">
+            <span class="w-1 h-1 rounded-full bg-slate-200 dark:bg-white/10"></span>
+            <span class="w-8 h-1 rounded-full bg-brand-500/40"></span>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {% for user in suggested_users %}
+        <a href="{% url 'parent_chat_user' user.0 %}" 
+           class="group relative p-[1px] rounded-[2.2rem] transition-all duration-500 hover:scale-[1.02]">
+            
+            <div class="absolute inset-0 rounded-[2.2rem] bg-gradient-to-br from-slate-200 to-transparent dark:from-white/10 group-hover:from-brand-500 group-hover:to-indigo-600 transition-all duration-500"></div>
+
+            <div class="relative glass-card m-[1px] p-5 rounded-[2.1rem] bg-slate-50 dark:bg-[#0b1120] flex flex-col gap-5 overflow-hidden">
+                
+                <div class="absolute -right-4 -top-4 w-16 h-16 bg-brand-500/5 rounded-full blur-2xl group-hover:bg-brand-500/20 transition-all"></div>
+
+                <div class="flex items-center gap-4">
+                    <div class="relative shrink-0">
+                        <div class="w-12 h-12 flex items-center justify-center font-black text-sm transition-all duration-500
+                            {% if user.2 == 'class_head' %}
+                                text-white bg-brand-600 rounded-xl rotate-3 group-hover:rotate-0
+                            {% else %}
+                                text-slate-400 bg-slate-200 dark:bg-white/5 rounded-xl group-hover:bg-indigo-600 group-hover:text-white group-hover:-rotate-3
+                            {% endif %}">
+                            {{ user.1|first|upper }}
+                        </div>
+                        <div class="absolute -bottom-1 -left-1 flex gap-0.5">
+                            <span class="w-1 h-1 rounded-full bg-emerald-500/40"></span>
+                            <span class="w-1 h-1 rounded-full bg-emerald-500"></span>
+                        </div>
+                    </div>
+
+                    <div class="min-w-0 relative">
+                        <h4 class="text-[13px] font-black text-slate-700 dark:text-slate-200 truncate tracking-tight group-hover:text-brand-500 transition-colors">
+                            {{ user.1 }}
+                        </h4>
+                        <span class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">
+                            {% if user.2 == 'class_head' %} Lead_Proxy {% else %} Sector_Head {% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-white/5">
+                    <div class="flex flex-col gap-1">
+                        <p class="text-[7px] font-black text-slate-400 uppercase tracking-tighter">Stability_Rating</p>
+                        <div class="flex gap-0.5">
+                            <div class="h-1 w-3 bg-brand-500 rounded-full"></div>
+                            <div class="h-1 w-3 bg-brand-500 rounded-full"></div>
+                            <div class="h-1 w-3 bg-brand-500/20 rounded-full group-hover:bg-brand-500/60"></div>
+                            <div class="h-1 w-3 bg-brand-500/10 rounded-full"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="w-8 h-8 rounded-full border border-slate-200 dark:border-white/10 flex items-center justify-center transition-all group-hover:bg-brand-500 group-hover:border-brand-500">
+                        <i class="fa-solid fa-plus text-[10px] text-slate-400 group-hover:text-white"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+        {% empty %}
+        <div class="col-span-full py-16 flex flex-col items-center justify-center glass-card rounded-[3rem] border-2 border-dashed border-slate-100 dark:border-white/5">
+            <div class="relative mb-4">
+                <i class="fa-solid fa-satellite-dish text-2xl text-slate-300 dark:text-white/10"></i>
+                <div class="absolute inset-0 animate-ping bg-brand-500/20 rounded-full"></div>
+            </div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">System Synced: No Orphan Nodes</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+            </div>
+        </main>
+    </div>
+
+    
+
+    <script>
+        document.addEventListener('mousemove', (e) => {
+            const spotlight = document.getElementById('spotlight');
+            spotlight.style.setProperty('--x', `${e.clientX}px`);
+            spotlight.style.setProperty('--y', `${e.clientY}px`);
+        });
+
+        const themeBtn = document.getElementById('theme-switch');
+        const themeIcon = document.getElementById('theme-icon');
+        
+        // Initialize theme icon based on current theme
+        if (document.documentElement.classList.contains('dark')) {
+            themeIcon.className = 'fa-solid fa-sun text-amber-400';
+        } else {
+            themeIcon.className = 'fa-solid fa-moon text-brand-600';
+        }
+        
+        themeBtn.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            themeIcon.className = isDark ? 'fa-solid fa-sun text-amber-400' : 'fa-solid fa-moon text-brand-600';
+        });
+
+        document.getElementById('hamburger-button').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-active, .active, a[class*="bg-brand-500/10"][class*="text-white"], a[class*="bg-accent-fuchsia/10"][class*="text-white"], a[class*="bg-indigo-500/10"][class*="text-white"], a[class*="bg-emerald-500/10"][class*="text-white"]');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+    
+    <!-- Real-time Notification Badge Script -->
+    <script>
+    (function() {
+        let pollInterval;
+        
+        // Get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Fetch unread counts for all users
+        function fetchUnreadCounts() {
+            fetch("{% url 'parent_get_unread_count' %}", {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.senders) {
+                    // Update badge for each user
+                    data.senders.forEach(sender => {
+                        const badges = document.querySelectorAll(`.notification-badge[data-user-id="${sender.sender_id}"]`);
+                        badges.forEach(badge => {
+                            if (sender.count > 0) {
+                                badge.textContent = sender.count > 9 ? '9+' : sender.count;
+                                badge.classList.remove('hidden');
+                            } else {
+                                badge.classList.add('hidden');
+                            }
+                        });
+                    });
+                }
+            })
+            .catch(error => console.error('Error fetching unread counts:', error));
+        }
+        
+        // Initial fetch
+        setTimeout(fetchUnreadCounts, 500);
+        
+        // Poll for updates every 3 seconds
+        pollInterval = setInterval(fetchUnreadCounts, 3000);
+        
+        // Stop polling when leaving page
+        window.addEventListener('beforeunload', () => {
+            clearInterval(pollInterval);
+        });
+    })();
+    
+    // Toggle Suggested Users Section
+    (function() {
+        const toggleBtn = document.getElementById('toggle-suggested-btn');
+        const hideBtn = document.getElementById('hide-suggested-btn');
+        const suggestedSection = document.getElementById('suggested-users-section');
+        
+        if (toggleBtn && suggestedSection) {
+            toggleBtn.addEventListener('click', () => {
+                suggestedSection.classList.remove('hidden');
+                toggleBtn.classList.add('hidden');
+            });
+        }
+        
+        if (hideBtn && suggestedSection) {
+            hideBtn.addEventListener('click', () => {
+                suggestedSection.classList.add('hidden');
+                if (toggleBtn) {
+                    toggleBtn.classList.remove('hidden');
+                }
+            });
+        }
+    })();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,565 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Eduke | Secure Terminal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+  <script>
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+            accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b' }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+    
+    html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.01em; background-color: #f8fafc; }
+    .dark body { background-color: #020617; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    #spotlight {
+      position: fixed; inset: 0; pointer-events: none;
+      background: radial-gradient(circle at var(--x) var(--y), rgba(139, 92, 246, 0.12) 0%, transparent 40%);
+      z-index: 5;
+    }
+    .nav-item-active {
+        background: rgba(139, 92, 246, 0.1);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        color: white !important;
+    }
+
+    .glass-sidebar { background: rgba(10, 10, 20, 0.95); backdrop-filter: blur(30px); border-right: 1px solid rgba(139, 92, 246, 0.1); }
+    
+    .glass-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    .dark .glass-card { background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); }
+
+    .glass-sidebar { background: #0a0a14; border-right: 1px solid rgba(255, 255, 255, 0.05); }
+
+    .custom-scroll::-webkit-scrollbar { width: 5px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.2); border-radius: 10px; }
+
+    .message-enter { animation: bubbleUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+    @keyframes bubbleUp {
+        from { opacity: 0; transform: translateY(10px) scale(0.95); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes shimmer {
+        100% { transform: translateX(100%); }
+    }
+
+    /* Hide scrollbar for textarea */
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    /* Fix text color in dark mode */
+    .dark textarea#student-message {
+        color: #e2e8f0 !important;
+    }
+    
+    textarea#student-message {
+        color: #1e293b !important;
+    }
+
+    /* Chat Physics */
+    .chat-bubble-out { border-radius: 20px 20px 4px 20px; background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); }
+    .chat-bubble-in { border-radius: 20px 20px 20px 4px; background: rgba(255,255,255,0.8); }
+    .dark .chat-bubble-in { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
+  </style>
+</head>
+
+<body class="text-slate-900 dark:text-white">
+  <div id="spotlight"></div>
+
+  <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+    
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 h-full shrink-0">
+            <div class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden">
+                
+                <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+                    <div class="flex items-center gap-3 group cursor-pointer">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 dark:border-white/10 bg-white/10 dark:bg-white/5 group-hover:rotate-12 transition-transform animate-pulse bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 bg-[length:200%_200%]">
+                            <img src="{% static 'main/images/logobase_white.png' %}" class="w-6 h-6 object-contain">
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span class="text-accent-fuchsia">.</span></h2>
+                            <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Parent Command</p>
+                        </div>
+                    </div>
+                    <button id="close-sidebar" class="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white transition-all">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <nav class="flex-grow px-4 space-y-4 overflow-y-auto custom-scroll py-2">
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Navigation</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'parent_dashboard' %}" class="flex items-center gap-3 px-6 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all group">
+                                <i class="fa-solid fa-layer-group group-hover:text-brand-400 transition-colors"></i>
+                                <span class="font-bold text-sm">Dashboard</span>
+                            </a>
+                            <a href="{% url 'parent_class' %}" class="flex items-center gap-3 px-6 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all group">
+                                <i class="fa-solid fa-chalkboard group-hover:text-brand-400 transition-colors"></i>
+                                <span class="font-bold text-sm">Your Class</span>
+                            </a>
+                            <a href="{% url 'parent_teacher_profile' %}" class="flex items-center gap-3 px-6 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all group">
+                                <i class="fa-solid fa-chalkboard-user group-hover:text-brand-400 transition-colors"></i>
+                                <span class="font-bold text-sm">Your Teacher</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Analytics</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'parent_evaluation' %}" class="flex items-center gap-3 px-6 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all group">
+                                <i class="fa-solid fa-square-poll-vertical group-hover:text-accent-fuchsia transition-colors"></i>
+                                <span class="font-bold text-sm">Evaluation</span>
+                            </a>
+                            <a href="{% url 'parent_student_performance' %}" class="flex items-center gap-3 px-6 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all group">
+                                <i class="fa-solid fa-chart-line group-hover:text-accent-fuchsia transition-colors"></i>
+                                <span class="font-bold text-sm">Performance</span>
+                            </a>
+                            <a href="{% url 'parent_prediction' %}" class="flex items-center gap-3 px-6 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all group">
+                                <i class="fa-solid fa-fire-flame-curved group-hover:text-accent-fuchsia transition-colors"></i>
+                                <span class="font-bold text-sm">Score Prediction</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Communication</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'parent_eduke_bot' %}" class="flex items-center gap-3 px-6 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all group">
+                                <i class="fa-solid fa-robot group-hover:text-brand-400 transition-colors"></i>
+                                <span class="font-bold text-sm">Eduke Bot</span>
+                            </a>
+                            <a href="{% url 'parent_chat' %}" class="relative flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-white shadow-lg shadow-brand-500/5 group">
+                                <span class="absolute left-2 w-1 h-4 bg-brand-500 rounded-full shadow-[0_0_10px_#8b5cf6]"></span>
+                                <i class="fa-solid fa-comments"></i>
+                                <span class="font-bold text-sm">Eduke Chat</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">User</p>
+                        <div class="space-y-1">
+                            <a href="{% url 'parent_profile' %}" class="flex items-center gap-3 px-6 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all group">
+                                <i class="fa-solid fa-circle-user text-brand-400"></i>
+                                <span class="font-bold text-sm">Profile Settings</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+
+                <div class="p-4 shrink-0 mt-auto mb-2 lg:mb-4">
+                    <div class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3 transition-all hover:border-white/20">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 font-black text-white text-xs">
+                                {{ parent_name|slice:":1"|default:"P" }}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="text-[11px] font-black text-white truncate uppercase">{% if parent_name %}
+                                    {{ parent_name }}
+                                    {% else %}
+                                    Parent of {{ student_name|truncatewords:1|cut:"..."|cut:"…" }}
+                                    {% endif %}</h4>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none">Parent</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'logout' %}" class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 transition-all duration-300">
+                            <span class="text-[9px] font-black uppercase tracking-widest group-hover/btn:text-white">Logout</span>
+                            <i class="fa-solid fa-power-off text-[10px] group-hover/btn:text-white transition-colors"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+      
+      <header class="h-24 flex items-center justify-between px-8 shrink-0 border-b border-slate-200 dark:border-white/5 bg-white/40 dark:bg-slate-900/40">
+        <div class="flex items-center gap-5">
+          <button id="hamburger-button" class="lg:hidden w-11 h-11 flex items-center justify-center rounded-xl glass-card text-brand-600">
+              <i class="fa-solid fa-bars-staggered"></i>
+          </button>
+          <div class="relative group">
+              <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black text-white shadow-xl transition-transform group-hover:scale-105
+              {% if selected_user_role == 'class_head' %} bg-gradient-to-br from-brand-600 to-indigo-800
+              {% else %} bg-gradient-to-br from-accent-indigo to-brand-600 {% endif %}">
+                  {{ selected_user_name|slice:":1"|upper }}
+              </div>
+              <span class="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-4 border-white dark:border-[#0f172a] rounded-full"></span>
+          </div>
+          <div>
+              <h2 class="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-none">{{ selected_user_name }}</h2>
+              <div class="flex items-center gap-2 mt-1.5">
+                  <span class="px-2 py-0.5 rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400 text-[10px] font-black uppercase tracking-widest">
+                      {{ selected_user_role|cut:"_rating"|title }}
+                  </span>
+                  <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Protocol Active</span>
+              </div>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <a href="{% url 'parent_chat' %}" class="group flex items-center gap-3 px-4 py-2 rounded-xl glass-card border border-brand-500/20 hover:bg-brand-500 hover:text-white transition-all duration-300">
+                <i class="fa-solid fa-chevron-left text-[10px] group-hover:-translate-x-1 transition-transform text-slate-700 dark:text-white"></i>
+                <span class="mono text-[10px] font-black text-slate-700 dark:text-white uppercase tracking-widest">Return_Node</span>
+            </a>
+
+            <div class="h-6 w-px bg-slate-200 dark:bg-white/10 mx-1"></div>
+
+            <div class="relative flex items-center gap-4">
+                {% include 'parents/_notification_bell.html' %}
+                <button id="theme-switch" class="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-brand-600 dark:text-amber-400 hover:scale-110 transition-transform border border-white/20">
+                    <i id="theme-icon" class="fa-solid fa-moon text-xs"></i>
+                </button>
+            </div>
+        </div>
+      </header>
+
+      <div id="message-container" class="flex-1 overflow-y-auto px-6 py-10 space-y-8 custom-scroll bg-slate-50/30 dark:bg-transparent">
+        {% for message in messages %}
+        <div class="flex {% if message.1 == logged_in_user_id %}justify-end{% else %}justify-start{% endif %} message-enter">
+            <div class="max-w-[75%] md:max-w-[60%] flex flex-col {% if message.1 == logged_in_user_id %}items-end{% else %}items-start{% endif %}">
+                <div class="px-5 py-3.5 shadow-sm rounded-2xl relative
+                    {% if message.1 == logged_in_user_id %}
+                        bg-gradient-to-br from-brand-600 to-indigo-700 text-white rounded-tr-none
+                    {% else %}
+                        bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 rounded-tl-none
+                    {% endif %}">
+                    <p class="text-[15px] font-medium leading-relaxed leading-snug">{{ message.0 }}</p>
+                </div>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2 px-1" data-datetime="{{ message.3|date:'c' }}">
+                    {{ message.3|date:"M d, h:i A" }}
+                    {% if message.1 == logged_in_user_id %}
+                        <span class="ml-1 text-brand-500"><i class="fa-solid fa-check-double text-[8px]"></i></span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        {% empty %}
+        <div class="h-full flex flex-col items-center justify-center text-center opacity-30">
+            <i class="fa-solid fa-comments text-7xl mb-4 text-brand-500"></i>
+            <p class="font-black uppercase tracking-[0.3em] text-xs text-slate-500">Initialize Transmission</p>
+            <p class="text-[10px] font-bold text-slate-400 mt-2">Start a secure conversation with {{ selected_user_name }}</p>
+        </div>
+        {% endfor %}
+      </div>
+      <footer class="p-6 shrink-0 border-t border-slate-200 dark:border-white/5 bg-white/40 dark:bg-slate-900/40">
+        <form id="messageForm" method="POST" class="max-w-5xl mx-auto flex items-center gap-4">
+            {% csrf_token %}
+            <div class="flex-1 relative group">
+                <textarea name="message" id="student-message" placeholder="Execute message delivery..." required rows="1" 
+                    class="w-full pl-6 pr-14 py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-2xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-brand-500/10 transition-all resize-none shadow-inner overflow-hidden scrollbar-hide"></textarea>
+                <i class="fa-solid fa-shield-halved absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600"></i>
+            </div>
+            <button type="submit" class="relative w-14 h-14 bg-gradient-to-br from-brand-500 to-indigo-700 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-brand-500/30 transition-all duration-500 hover:shadow-brand-500/50 hover:-translate-y-1 hover:scale-110 active:scale-95 group overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                <i class="fa-solid fa-paper-plane rotate-45 text-xl relative z-10 transition-all duration-500 group-hover:translate-x-1 group-hover:-translate-y-1 group-hover:scale-110"></i>
+            </button>
+        </form>
+      </footer>
+
+    </main>
+  </div>
+
+    <script>
+        // Spotlight Movement
+        document.addEventListener('mousemove', e => {
+            const spotlight = document.getElementById('spotlight');
+            spotlight.style.setProperty('--x', `${e.clientX}px`);
+            spotlight.style.setProperty('--y', `${e.clientY}px`);
+        });
+
+        // Convert server timestamps to local time on page load
+        document.querySelectorAll('[data-datetime]').forEach(element => {
+            const datetimeStr = element.getAttribute('data-datetime');
+            if (datetimeStr) {
+                const date = new Date(datetimeStr);
+                const localTimeStr = date.toLocaleString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: true 
+                });
+                // Update the text content, preserving the check mark if it exists
+                const checkMark = element.querySelector('.fa-check-double')?.parentElement;
+                element.textContent = localTimeStr;
+                if (checkMark) {
+                    element.appendChild(checkMark);
+                }
+            }
+        });
+
+        // Theme Control
+        const themeBtn = document.getElementById('theme-switch');
+        const themeIcon = document.getElementById('theme-icon');
+        
+        // Initialize theme icon based on current theme
+        if (document.documentElement.classList.contains('dark')) {
+            themeIcon.className = 'fa-solid fa-sun';
+        } else {
+            themeIcon.className = 'fa-solid fa-moon';
+        }
+        
+        themeBtn.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            themeIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        });
+
+        // Sidebar Toggle
+        document.getElementById('hamburger-button').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+        });
+
+        document.getElementById('close-sidebar').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.add('-translate-x-full');
+        });
+
+        // Auto-Scroll to bottom
+        const messageContainer = document.getElementById("message-container");
+        const scrollToBottom = () => {
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+        };
+        window.addEventListener("load", scrollToBottom);
+
+        // Real-time Message Polling
+        const displayedMessages = new Set();
+        const currentUserId = parseInt("{{ logged_in_user_id }}") || 0;
+        
+        console.log('Current user ID:', currentUserId);
+        
+        // Get user ID from URL
+        const urlPath = window.location.pathname;
+        const userIdMatch = urlPath.match(/\/parent_chat\/(\d+)\//);
+        const TARGET_USER_ID = userIdMatch ? parseInt(userIdMatch[1]) : null;
+        
+        console.log('Target user ID:', TARGET_USER_ID);
+        
+        // Initialize displayedMessages set with existing messages on page load
+        const allMessages = messageContainer.querySelectorAll('[data-datetime]');
+        if (allMessages.length > 0) {
+            allMessages.forEach((msg, index) => {
+                // Create a unique key from timestamp and message content
+                const msgKey = `${msg.getAttribute('data-datetime')}_${index}`;
+                displayedMessages.add(msgKey);
+            });
+            console.log('Found', allMessages.length, 'existing messages');
+            console.log('Initial displayed messages count:', displayedMessages.size);
+        } else {
+            console.log('No existing messages found in DOM');
+        }
+
+        function fetchNewMessages() {
+            if (!TARGET_USER_ID) return;
+            
+            console.log('Fetching messages for user:', TARGET_USER_ID);
+            
+            fetch(`/parent/fetch_messages/${TARGET_USER_ID}/`)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Fetched data:', data);
+                    console.log('Number of messages:', data.messages ? data.messages.length : 0);
+                    
+                    if (data.messages && data.messages.length > 0) {
+                        let newMessageCount = 0;
+                        
+                        data.messages.forEach((msg, index) => {
+                            const msgKey = `${msg.created_at}_${index}`;
+                            
+                            // Only add if not already displayed
+                            if (!displayedMessages.has(msgKey)) {
+                                console.log(`New message found: ${msg.message.substring(0, 30)}...`);
+                                appendSingleMessage(msg);
+                                displayedMessages.add(msgKey);
+                                newMessageCount++;
+                            }
+                        });
+                        
+                        console.log('Added', newMessageCount, 'new messages');
+                        console.log('Total displayed messages:', displayedMessages.size);
+                        
+                        if (newMessageCount > 0) {
+                            scrollToBottom();
+                        }
+                    } else {
+                        console.log('No messages in response');
+                    }
+                })
+                .catch(error => console.error('Error fetching messages:', error));
+        }
+
+        // Start polling immediately
+        setTimeout(fetchNewMessages, 500);
+
+        function appendSingleMessage(msg) {
+            const isSentByMe = msg.sender_id === currentUserId;
+            console.log(`Appending message: sender=${msg.sender_id}, currentUserId=${currentUserId}, isSentByMe=${isSentByMe}`);
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${isSentByMe ? 'justify-end' : 'justify-start'} message-enter`;
+            
+            // Convert ISO datetime string to Date object and format to local time
+            const timestamp = new Date(msg.created_at);
+            const timeStr = timestamp.toLocaleString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                hour12: true 
+            });
+            
+            messageDiv.innerHTML = `
+                <div class="max-w-[75%] md:max-w-[60%] flex flex-col ${isSentByMe ? 'items-end' : 'items-start'}">
+                    <div class="px-5 py-3.5 shadow-sm rounded-2xl relative ${
+                        isSentByMe 
+                            ? 'bg-gradient-to-br from-brand-600 to-indigo-700 text-white rounded-tr-none' 
+                            : 'bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 rounded-tl-none'
+                    }">
+                        <p class="text-[15px] font-medium leading-relaxed leading-snug">${escapeHtml(msg.message)}</p>
+                    </div>
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2 px-1" data-datetime="${msg.created_at}">
+                        ${timeStr}
+                        ${isSentByMe ? '<span class="ml-1 text-brand-500"><i class="fa-solid fa-check-double text-[8px]"></i></span>' : ''}
+                    </p>
+                </div>
+            `;
+            
+            console.log('Appending message div to container');
+            messageContainer.appendChild(messageDiv);
+        }
+
+        function appendNewMessages(messages) {
+            console.log('Appending', messages.length, 'new messages');
+            
+            messages.forEach((msg, index) => {
+                appendSingleMessage(msg);
+            });
+            
+            console.log('Finished appending messages');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Poll for new messages every 2 seconds
+        const pollInterval = setInterval(fetchNewMessages, 2000);
+
+        // Stop polling when leaving the page
+        window.addEventListener('beforeunload', () => {
+            clearInterval(pollInterval);
+        });
+
+        // Initial fetch after a short delay
+        setTimeout(fetchNewMessages, 1000);
+
+        // Input Handling
+        const messageForm = document.getElementById("messageForm");
+        const inputField = document.getElementById("student-message");
+
+        // Send message on Enter key (without Shift)
+        inputField.addEventListener("keydown", function(e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                messageForm.requestSubmit();
+            }
+        });
+
+        messageForm.addEventListener("submit", function(e) {
+            e.preventDefault();
+            
+            // Get the message value
+            const message = inputField.value.trim();
+            
+            if (message) {
+                // Submit the form via AJAX or regular submit
+                const formData = new FormData(messageForm);
+                
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // Clear input field immediately
+                        inputField.value = "";
+                        inputField.style.height = 'auto';
+                        inputField.focus();
+                        
+                        // Fetch updated messages immediately
+                        setTimeout(fetchNewMessages, 300);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Fallback to regular form submission
+                    messageForm.submit();
+                });
+            }
+        });
+
+        // Dynamic Textarea Height
+        inputField.addEventListener("input", function() {
+            this.style.height = "auto";
+            this.style.height = (this.scrollHeight) + "px";
+            if(this.scrollHeight > 120) this.style.overflowY = "scroll";
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-active, .active, a[class*="bg-brand-500/10"][class*="text-white"], a[class*="bg-accent-fuchsia/10"][class*="text-white"], a[class*="bg-indigo-500/10"][class*="text-white"], a[class*="bg-emerald-500/10"][class*="text-white"]');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+</html>

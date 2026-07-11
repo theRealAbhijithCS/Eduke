@@ -1,0 +1,708 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduke | {{ subject.subject_name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{% static 'main/images/logobase_white.png' %}">
+
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+                        accent: { fuchsia: '#d946ef', indigo: '#6366f1', rose: '#f43f5e', amber: '#f59e0b' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            letter-spacing: -0.01em;
+            background-color: #f8fafc;
+        }
+
+        .dark body {
+            background-color: #020617;
+        }
+
+        /* Premium Glass Effects */
+        .glass-sidebar {
+            background: rgba(10, 10, 20, 0.95);
+            backdrop-filter: blur(30px);
+            border-right: 1px solid rgba(139, 92, 246, 0.1);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Nav Active Indicator */
+        .nav-item-link {
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .nav-item-link.active {
+            color: #a78bfa !important;
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+        }
+
+        .nav-item-link.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 25%;
+            height: 50%;
+            width: 4px;
+            background: #d946ef;
+            box-shadow: 0 0 15px #d946ef;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* Scrollbar Styling */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #8b5cf633;
+            border-radius: 10px;
+        }
+
+        .fade-up {
+            animation: fadeUp 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+
+<body class="text-slate-900">
+
+
+    <div class="relative z-10 flex h-screen p-0 lg:p-6 gap-0 lg:gap-6 overflow-hidden">
+
+        <aside id="sidebar"
+            class="fixed inset-y-0 left-0 z-50 w-72 transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-500 ease-in-out h-full">
+            <div
+                class="flex flex-col h-full glass-sidebar lg:rounded-[3rem] shadow-2xl overflow-hidden border-r border-white/5 bg-[#0a0a14]/80 backdrop-blur-xl">
+
+                <div class="p-8 pb-4 shrink-0 flex items-center justify-between">
+                    <div class="flex items-center gap-3 group">
+                        <div
+                            class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-r from-brand-500 via-accent-fuchsia to-indigo-500 animate-pulse">
+                            <img src="{% static 'main/images/logobase_white.png' %}" class="w-6 h-6 object-contain">
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black tracking-tighter text-white uppercase">Eduke<span
+                                    class="text-accent-fuchsia">.</span></h2>
+                            <p class="text-[8px] font-black text-brand-400 uppercase tracking-[0.3em]">Student Portal
+                            </p>
+                        </div>
+                    </div>
+                    <button id="close-sidebar" class="lg:hidden text-slate-400 hover:text-white"><i
+                            class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+
+                <nav class="flex-grow px-4 space-y-4 overflow-y-auto custom-scroll py-2">
+                    <div>
+                        <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">Academic
+                        </p>
+                        <div class="space-y-1">
+                            <a href="{% url 'student_dashboard' %}"
+                                class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                                <i class="fa-solid fa-layer-group"></i><span class="font-bold text-sm">Dashboard</span>
+                            </a>
+                            <a href="{% url 'student_class' %}"
+                                class="nav-item-link active relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                                <i class="fa-solid fa-chalkboard"></i><span class="font-bold text-sm">Your Class</span>
+                            </a>
+                            <a href="{% url 'student_performance'%}"
+                                class="nav-item-link  relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                                <i class="fa-solid fa-chart-line"></i><span class="font-bold text-sm">Performance</span>
+                            </a>
+                            <a href="{% url 'student_view_attendance'%}"
+                                class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+                                <i class="fa-solid fa-calendar-check"></i><span class="font-bold text-sm">View
+                                    Attendance</span>
+                            </a>
+                            <div>
+                                <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">AI
+                                    Tools</p>
+                                <div class="space-y-1">
+                                    <a href="{% url 'student_prediction' %}"
+                                        class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_prediction' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                                        <i
+                                            class="fa-solid fa-fire-flame-curved text-base group-hover:text-brand-400 transition-colors"></i>
+                                        <span class="font-bold text-sm">Prediction</span>
+                                    </a>
+
+                                    <a href="{% url 'student_eduke_bot' %}"
+                                        class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_eduke_bot' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                                        <i
+                                            class="fa-solid fa-robot text-base group-hover:text-brand-400 transition-colors"></i>
+                                        <span class="font-bold text-sm">Eduke Bot</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="pt-2">
+                                <p class="px-6 text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2">
+                                    Social</p>
+                                <div class="space-y-1">
+                                    <a href="{% url 'student_chat' %}"
+                                        class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_chat' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                                        <i
+                                            class="fa-solid fa-comments text-base group-hover:text-brand-400 transition-colors"></i>
+                                        <span class="font-bold text-sm">Eduke Chat</span>
+                                    </a>
+
+                                    <a href="{% url 'student_profile' %}"
+                                        class="nav-item-link relative flex items-center gap-3 px-6 py-2.5 rounded-xl transition-all duration-300 group
+                {% if request.resolver_match.url_name == 'student_profile' %} active text-white {% else %} text-slate-400 hover:text-white hover:bg-white/5 {% endif %}">
+                                        <i
+                                            class="fa-solid fa-circle-user text-base group-hover:text-brand-400 transition-colors"></i>
+                                        <span class="font-bold text-sm">Profile</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+
+                <div class="p-4 mt-auto">
+                    <div
+                        class="relative overflow-hidden group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 flex flex-col gap-3">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center border border-white/20 font-black text-white text-xs">
+                                {{ student_name|slice:":1"|upper }}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="text-[11px] font-black text-white truncate uppercase">{{ student_name }}</h4>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Student</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'logout' %}"
+                            class="group/btn relative flex items-center justify-between px-4 py-2.5 rounded-xl bg-rose-500/5 hover:bg-rose-500 border border-rose-500/20 text-rose-400 transition-all">
+                            <span
+                                class="text-[9px] font-black uppercase tracking-widest group-hover/btn:text-white">Logout</span>
+                            <i class="fa-solid fa-power-off text-[10px] group-hover/btn:text-white"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+
+            <header class="h-24 px-8 flex items-center justify-between relative shrink-0 z-40">
+                <div
+                    class="absolute inset-0 bg-white/30 dark:bg-[#0a0a14]/40 backdrop-blur-2xl border-b border-white/20 dark:border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.03)]">
+                </div>
+
+                <div class="relative z-10 flex items-center justify-between w-full">
+
+                    <div class="flex items-center gap-6">
+                        <button id="hamburger-button"
+                            class="lg:hidden w-12 h-12 flex items-center justify-center rounded-2xl bg-white/40 dark:bg-white/5 border border-white/40 dark:border-white/10 shadow-xl text-brand-600 transition-all active:scale-90">
+                            <i class="fas fa-bars-staggered"></i>
+                        </button>
+
+                        <div class="flex flex-col">
+                            <div class="flex items-center gap-3">
+                                <h2
+                                    class="text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tighter leading-none uppercase italic">
+                                    {{ subject.subject_name }}
+                                </h2>
+                                <span
+                                    class="hidden sm:inline-block px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.2em] animate-pulse">
+                                    Live Node
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2 mt-2">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Division</p>
+                                <span class="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                                <p
+                                    class="text-[10px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-[0.2em]">
+                                    {{ subject.class_name }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        {% include 'students/_notification_bell.html' %}
+                        <a href="{% url 'student_class' %}"
+                            class="group flex items-center gap-3 px-5 h-12 rounded-2xl bg-white/60 dark:bg-white/5 border border-white dark:border-white/10 shadow-2xl hover:scale-105 hover:shadow-brand-500/10 transition-all duration-500 overflow-hidden">
+                            <div class="relative w-5 h-5 flex items-center justify-center">
+                                <i
+                                    class="fa-solid fa-chevron-left text-xs text-slate-600 dark:text-slate-400 group-hover:-translate-x-1 transition-transform duration-300"></i>
+                            </div>
+                            <span
+                                class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 dark:text-slate-300">
+                                Back to Class
+                            </span>
+                        </a>
+
+                        <div
+                            class="h-8 w-px bg-gradient-to-b from-transparent via-slate-300 dark:via-white/20 to-transparent">
+                        </div>
+
+                        
+
+                        <button id="theme-switch"
+                            class="w-12 h-12 rounded-2xl bg-white/60 dark:bg-white/5 border border-white dark:border-white/10 shadow-2xl flex items-center justify-center text-brand-600 dark:text-amber-400 hover:scale-110 hover:shadow-brand-500/20 transition-all duration-500 group">
+                            <i id="theme-icon"
+                                class="fa-solid fa-moon text-lg group-hover:rotate-[360deg] transition-transform duration-1000"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div id="content-scroll-container" class="flex-1 overflow-y-auto px-8 py-8 space-y-8 custom-scroll">
+
+                <section
+                    class="relative group p-8 lg:p-12 rounded-[3.5rem] bg-slate-950 text-white shadow-2xl overflow-hidden fade-up border border-white/5">
+
+                    <div
+                        class="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] pointer-events-none group-hover:bg-purple-600/30 transition-all duration-700">
+                    </div>
+                    <div
+                        class="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none">
+                    </div>
+
+                    <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+
+                        <div class="space-y-6">
+                            <div class="flex items-center gap-3">
+                                <span
+                                    class="px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 font-black uppercase tracking-[0.2em] text-[10px]">
+                                    Academic Module
+                                </span>
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-700"></span>
+                                <span class="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+                                    {{ subject.class_name }}
+                                </span>
+                            </div>
+
+                            <div>
+                                <h1
+                                    class="text-5xl lg:text-7xl font-black tracking-tighter uppercase italic leading-[0.8] mb-4">
+                                    {{ subject.subject_name }}
+                                </h1>
+
+                                <div class="flex flex-wrap items-center gap-6 mt-4">
+                                    <div
+                                        class="flex items-center gap-3 bg-white/5 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10">
+                                        <div
+                                            class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-[10px] font-bold">
+                                            {{ subject.subject_head|slice:":1" }}
+                                        </div>
+                                        <div>
+                                            <p class="text-[9px] text-slate-500 uppercase font-black leading-none">
+                                                Instructor</p>
+                                            <p class="text-sm font-bold text-slate-200 uppercase tracking-tight">
+                                                {{subject.subject_head }}</p>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="flex items-center gap-3 bg-white/5 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10">
+                                        <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center">
+                                            <i class="fa-solid fa-graduation-cap text-[10px] text-purple-400"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-[9px] text-slate-500 uppercase font-black leading-none">
+                                                Enrollment</p>
+                                            <p class="text-sm font-bold text-slate-200 uppercase tracking-tight">
+                                                {{subject.class_name }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="hidden lg:flex flex-col items-end gap-4">
+                            <div class="text-right">
+                                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Module
+                                    Status</p>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-2xl font-black text-white italic uppercase">Active</span>
+                                    <span class="relative flex h-3 w-3">
+                                        <span
+                                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <i
+                        class="fa-solid fa-book-open absolute -right-8 -bottom-10 text-[18rem] opacity-[0.03] -rotate-12 pointer-events-none group-hover:rotate-0 group-hover:opacity-[0.05] transition-all duration-1000"></i>
+                </section>
+
+                <!-- Side-by-Side Sections Container -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Quiz Header Card -->
+                    <div class="glass-card rounded-[3rem] p-10 bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl border border-white dark:border-white/10 shadow-2xl relative overflow-hidden fade-up"
+                        style="animation-delay: 0.1s">
+
+                        <div
+                            class="absolute -top-12 -left-12 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl pointer-events-none">
+                        </div>
+
+                        <div class="relative z-10 flex flex-col items-center text-center gap-6">
+                            <div
+                                class="w-16 h-16 flex items-center justify-center bg-purple-600 rounded-[1.5rem] shadow-2xl shadow-purple-500/40 rotate-3 transition-transform duration-500 hover:rotate-12">
+                                <i class="fa-solid fa-graduation-cap text-2xl text-white"></i>
+                            </div>
+
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span>
+                                    <h3
+                                        class="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-[0.3em]">
+                                        Eduke Assessment</h3>
+                                </div>
+                                <h2
+                                    class="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+                                    Subject Quiz</h2>
+                            </div>
+
+                            <button onclick="toggleViewQuizzes()"
+                                class="group relative overflow-hidden bg-slate-900 dark:bg-purple-600 text-white px-8 py-3 rounded-2xl font-black text-[9px] uppercase tracking-[0.2em] shadow-2xl hover:scale-105 active:scale-95 transition-all">
+                                <span class="relative z-10 flex items-center gap-2">
+                                    View Quizzes
+                                    <i id="toggleChevron"
+                                        class="fa-solid fa-chevron-down transition-transform duration-500"></i>
+                                </span>
+                                <div
+                                    class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700">
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Study Materials Header Card -->
+                    <div class="glass-card rounded-[3rem] p-10 bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl border border-white dark:border-white/10 shadow-2xl relative overflow-hidden fade-up"
+                        style="animation-delay: 0.2s">
+
+                        <div
+                            class="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none">
+                        </div>
+
+                        <div class="relative z-10 flex flex-col items-center text-center gap-6">
+                            <div
+                                class="w-16 h-16 flex items-center justify-center bg-indigo-600 rounded-[1.5rem] shadow-2xl shadow-indigo-500/40 -rotate-3 transition-transform duration-500 hover:rotate-0">
+                                <i class="fa-solid fa-book-bookmark text-2xl text-white"></i>
+                            </div>
+
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                    <h3
+                                        class="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.3em]">
+                                        Resource Library</h3>
+                                </div>
+                                <h2
+                                    class="text-2xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+                                    Study Materials</h2>
+                            </div>
+
+                            <button onclick="toggleViewMaterials()"
+                                class="group relative overflow-hidden bg-slate-900 dark:bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-[9px] uppercase tracking-[0.2em] shadow-2xl hover:scale-105 active:scale-95 transition-all">
+                                <span class="relative z-10 flex items-center gap-2">
+                                    View Materials
+                                    <i id="studyChevron"
+                                        class="fa-solid fa-chevron-down transition-transform duration-500"></i>
+                                </span>
+                                <div
+                                    class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700">
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Combined Content Area -->
+                <div id="quizzesList"
+                    class="hidden glass-card rounded-[3rem] p-10 bg-white/60 dark:bg-slate-900/40 backdrop-blur-2xl border border-slate-200 dark:border-white/10 shadow-2xl fade-up">
+
+                    <div class="flex items-center gap-4 mb-8">
+                        <i class="fa-solid fa-graduation-cap text-2xl text-purple-500"></i>
+                        <h3 class="text-xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+                            Available Quizzes</h3>
+                    </div>
+
+                    <div id="quizzes" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for quiz in quizzes %}
+                        <a href="{% url 'student_quiz' subject.id quiz.id %}" class="group block">
+                            <div class="relative p-6 rounded-[2rem] 
+                        /* Light Theme: Solid background and visible border */
+                        bg-white border-slate-200 shadow-sm 
+                        /* Dark Theme: Transparent glass effect */
+                        dark:bg-white/5 dark:border-white/5 
+                        /* Hover States */
+                        hover:border-purple-500/50 hover:shadow-lg transition-all duration-300">
+
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-4">
+                                        <div
+                                            class="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-900 shadow-sm flex items-center justify-center text-purple-600 font-black italic group-hover:bg-purple-600 group-hover:text-white transition-all duration-500">
+                                            {{ forloop.counter }}
+                                        </div>
+                                        <div>
+                                            <p
+                                                class="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5 flex items-center gap-2">
+                                                Assessment
+                                                {% if quiz.is_attended %}
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                                    Score: {{ quiz.score_pct }}%
+                                                </span>
+                                                {% endif %}
+                                            </p>
+                                            <p
+                                                class="text-lg font-black text-slate-800 dark:text-white tracking-tight group-hover:text-purple-600 transition-colors">
+                                                {{ quiz.name }}
+                                            </p>
+                                            <p
+                                                class="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-0.5">
+                                                {{ quiz.created_at|date:"F j, g:iA" }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="w-10 h-10 rounded-full border border-slate-200 dark:border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-4 transition-all">
+                                        <i class="fa-solid fa-play text-xs text-purple-500"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        {% empty %}
+                        <div class="col-span-full py-10 text-center">
+                            <div
+                                class="inline-flex w-16 h-16 rounded-full bg-slate-100 dark:bg-white/5 items-center justify-center mb-4">
+                                <i class="fa-solid fa-inbox text-slate-400"></i>
+                            </div>
+                            <p class="text-slate-400 text-xs font-black uppercase tracking-widest">No quizzes scheduled
+                                yet</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Study Materials Content List -->
+                <div id="StudyMaterialsList"
+                    class="hidden glass-card rounded-[3rem] p-10 bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl border border-white dark:border-white/10 shadow-2xl fade-up">
+                    <div class="flex items-center gap-4 mb-8">
+                        <i class="fa-solid fa-book-bookmark text-2xl text-indigo-500"></i>
+                        <h3 class="text-xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+                            Study Materials</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for study in studys %}
+                        <div
+                            class="group relative p-5 rounded-[2rem] bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 hover:border-indigo-500/30 transition-all duration-300">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-4 truncate">
+                                    <div
+                                        class="w-12 h-12 flex-shrink-0 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                                        <i class="fa-solid fa-file-lines text-lg"></i>
+                                    </div>
+
+                                    <div class="truncate">
+                                        <p
+                                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                                            Document</p>
+                                        <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200 truncate pr-4">
+                                            {{ study.file_url|cut:"media/uploads/" }}
+                                        </h4>
+                                    </div>
+                                </div>
+
+                                {% if study.file_url %}
+                                <a href="/{{ study.file_url }}" target="_blank"
+                                    class="flex-shrink-0 w-10 h-10 rounded-full bg-slate-900 dark:bg-white/10 flex items-center justify-center text-white hover:bg-indigo-600 transition-colors shadow-lg">
+                                    <i class="fa-solid fa-arrow-down text-[10px]"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+
+                            <div
+                                class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-1 bg-indigo-500 rounded-full group-hover:w-1/2 transition-all duration-500">
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div
+                            class="col-span-full py-12 text-center bg-slate-50 dark:bg-white/5 rounded-[2rem] border border-dashed border-slate-200 dark:border-white/10">
+                            <i class="fa-solid fa-folder-open text-4xl text-slate-300 mb-4 block"></i>
+                            <p class="text-slate-400 text-xs font-black uppercase tracking-widest">No resources
+                                found for this module</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+
+    </div>
+    </main>
+    </div>
+
+    <script>
+        // Spotlight Movement
+        window.addEventListener('mousemove', e => {
+            const spotlight = document.getElementById('spotlight');
+            spotlight.style.setProperty('--x', `${e.clientX}px`);
+            spotlight.style.setProperty('--y', `${e.clientY}px`);
+            spotlight.style.background = `radial-gradient(circle at ${e.clientX}px ${e.clientY}px, rgba(139, 92, 246, 0.12) 0%, transparent 40%)`;
+        });
+
+        const hamBtn = document.getElementById('hamburger-button');
+        const sidebar = document.getElementById('sidebar');
+        const closeBtn = document.getElementById('close-sidebar');
+
+        hamBtn.addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+        closeBtn.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+
+        function toggleViewQuizzes() {
+            const quizList = document.getElementById('quizzesList');
+            const materialList = document.getElementById('StudyMaterialsList');
+            const quizChevron = document.getElementById('toggleChevron');
+            const studyChevron = document.getElementById('studyChevron');
+
+            // Close materials if open
+            if (!materialList.classList.contains('hidden')) {
+                materialList.classList.add('hidden');
+                studyChevron.classList.remove('rotate-180');
+            }
+
+            // Toggle Quizzes
+            const isClosing = !quizList.classList.contains('hidden');
+            quizList.classList.toggle('hidden');
+
+            if (isClosing) {
+                quizChevron.classList.remove('rotate-180');
+            } else {
+                quizChevron.classList.add('rotate-180');
+                // Scroll to content for better UX
+                setTimeout(() => {
+                    quizList.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+            }
+        }
+
+        function toggleViewMaterials() {
+            const quizList = document.getElementById('quizzesList');
+            const materialList = document.getElementById('StudyMaterialsList');
+            const quizChevron = document.getElementById('toggleChevron');
+            const studyChevron = document.getElementById('studyChevron');
+
+            // Close quizzes if open
+            if (!quizList.classList.contains('hidden')) {
+                quizList.classList.add('hidden');
+                quizChevron.classList.remove('rotate-180');
+            }
+
+            // Toggle Materials
+            const isClosing = !materialList.classList.contains('hidden');
+            materialList.classList.toggle('hidden');
+
+            if (isClosing) {
+                studyChevron.classList.remove('rotate-180');
+            } else {
+                studyChevron.classList.add('rotate-180');
+                // Scroll to content for better UX
+                setTimeout(() => {
+                    materialList.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+            }
+        }
+
+        // Theme Toggle Logic
+        const themeSwitch = document.getElementById('theme-switch');
+        const themeIcon = document.getElementById('theme-icon');
+
+        function updateThemeIcon() {
+            if (document.documentElement.classList.contains('dark')) {
+                themeIcon.className = 'fa-solid fa-sun';
+            } else {
+                themeIcon.className = 'fa-solid fa-moon';
+            }
+        }
+        updateThemeIcon();
+
+        themeSwitch.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+            updateThemeIcon();
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-link.active');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+
+</html>

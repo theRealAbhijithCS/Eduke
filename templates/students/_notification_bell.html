@@ -1,0 +1,179 @@
+<!-- Notification Bell Component -->
+<button id="notification-bell" class="relative w-12 h-12 rounded-2xl glass-card flex items-center justify-center hover:scale-110 transition-transform" title="Notifications">
+  <i class="fa-solid fa-bell text-brand-600 dark:text-amber-400 text-lg"></i>
+  <span id="notification-badge" class="hidden absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center animate-pulse">0</span>
+</button>
+
+<!-- Notification Dropdown -->
+<div id="notification-dropdown" class="hidden absolute right-8 top-20 w-80 glass-card rounded-2xl shadow-2xl border border-white/20 z-50 overflow-hidden">
+  <div class="bg-gradient-to-r from-brand-600 to-indigo-700 px-5 py-4">
+    <div class="flex items-center justify-between">
+      <h3 class="text-white font-black text-sm uppercase tracking-wider">New Messages</h3>
+      <span id="dropdown-total" class="px-2 py-1 bg-white/20 rounded-lg text-white text-[10px] font-black">0</span>
+    </div>
+  </div>
+  
+  <div id="notification-list" class="max-h-80 overflow-y-auto custom-scroll py-2">
+    <!-- Notifications will be loaded here -->
+    <div class="px-5 py-8 text-center">
+      <i class="fa-solid fa-spinner fa-spin text-2xl text-slate-400"></i>
+      <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">Loading...</p>
+    </div>
+  </div>
+  
+  <div class="border-t border-white/10 px-5 py-3 bg-white/5">
+    <a href="{% url 'student_chat' %}" class="text-[9px] font-black text-brand-500 uppercase tracking-widest hover:text-brand-600 transition-colors block text-center">
+      View All Messages →
+    </a>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Check if student is logged in (skip for login pages)
+  const isChatPage = window.location.pathname.includes('/student/student_chat/');
+  const isChatUserPage = window.location.pathname.includes('/student/chat/');
+  
+  // Don't show badge on chat pages since messages are marked as read there
+  const shouldShowBadge = !isChatUserPage;
+  
+  let unreadCount = 0;
+  let pollInterval;
+  
+  // Fetch unread count from API
+  function fetchUnreadCount() {
+    fetch("{% url 'student_get_unread_count' %}")
+      .then(response => response.json())
+      .then(data => {
+        unreadCount = data.total_unread || 0;
+        updateNotificationUI(data);
+      })
+      .catch(error => console.error('Error fetching unread count:', error));
+  }
+  
+  // Update notification UI
+  function updateNotificationUI(data) {
+    const badge = document.getElementById('notification-badge');
+    const dropdown = document.getElementById('notification-dropdown');
+    const notificationList = document.getElementById('notification-list');
+    const dropdownTotal = document.getElementById('dropdown-total');
+    
+    // Calculate total including announcements
+    const announcementCount = data.unread_announcements || 0;
+    const messageCount = data.total_unread - announcementCount;
+    const totalCount = data.total_unread;
+    
+    // Update badge with total count
+    if (shouldShowBadge && totalCount > 0) {
+      badge.textContent = totalCount > 9 ? '9+' : totalCount;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+    
+    // Update dropdown total
+    dropdownTotal.textContent = totalCount;
+    
+    // Build notification list
+    let html = '';
+    
+    // Add announcements first
+    if (announcementCount > 0) {
+      html += `
+        <a href="/student/class/" class="block px-5 py-3 bg-brand-500/5 border-b border-white/10 hover:bg-brand-500/10 transition-colors group">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-[9px] font-black text-brand-400 uppercase tracking-widest">New Announcements</p>
+            <span class="px-2 py-0.5 bg-brand-500 rounded-full text-white text-[8px] font-black">${announcementCount}</span>
+          </div>
+          <p class="text-[8px] font-bold text-slate-400">You have ${announcementCount} unread announcement${announcementCount > 1 ? 's' : ''}</p>
+          <div class="flex items-center gap-1 mt-2">
+            <span class="text-[8px] font-black text-brand-500 uppercase tracking-wider">View All →</span>
+            <i class="fa-solid fa-arrow-right text-[6px] text-brand-500 group-hover:translate-x-1 transition-transform"></i>
+          </div>
+        </a>
+      `;
+    }
+    
+    // Add messages from teachers
+    if (data.senders && data.senders.length > 0) {
+      data.senders.forEach(sender => {
+        const colorClass = sender.role === 'class_head' ? 'from-purple-500 to-indigo-600' : 'from-blue-500 to-cyan-600';
+        
+        html += `
+          <a href="/student/chat/${sender.sender_id}/" 
+             class="flex items-center gap-3 px-5 py-3 hover:bg-white/5 transition-colors group">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br ${colorClass} text-white flex items-center justify-center text-sm font-black shadow-lg group-hover:scale-110 transition-transform">
+              ${sender.sender_name.charAt(0).toUpperCase()}
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[11px] font-bold text-slate-800 dark:text-white truncate">${sender.sender_name}</p>
+              <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">${sender.count} new message${sender.count > 1 ? 's' : ''}</p>
+            </div>
+            <div class="w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[8px] font-black animate-pulse">
+              ${sender.count}
+            </div>
+          </a>
+        `;
+      });
+    }
+    
+    if (totalCount === 0) {
+      html = `
+        <div class="px-5 py-8 text-center">
+          <i class="fa-solid fa-check-circle text-3xl text-emerald-500 mb-2"></i>
+          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">All caught up!</p>
+        </div>
+      `;
+    }
+    
+    notificationList.innerHTML = html;
+  }
+  
+  // Toggle dropdown
+  const bellBtn = document.getElementById('notification-bell');
+  const dropdown = document.getElementById('notification-dropdown');
+  
+  if (bellBtn) {
+    bellBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('hidden');
+      fetchUnreadCount(); // Refresh when opened
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target) && !bellBtn.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
+  }
+  
+  // Initial fetch
+  fetchUnreadCount();
+  
+  // Poll for updates every 3 seconds
+  pollInterval = setInterval(fetchUnreadCount, 3000);
+  
+  // Stop polling when leaving page
+  window.addEventListener('beforeunload', () => {
+    clearInterval(pollInterval);
+  });
+})();
+</script>
+
+<style>
+#notification-dropdown {
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>

@@ -1,0 +1,477 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduke Report | {{ report_type }} - {{ selected_class.class_name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { brand: { 500: '#6366f1', 600: '#4f46e5' } } } },
+            darkMode: 'class'
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Custom Scrollbar for Table Container */
+        .table-container {
+            max-height: calc(100vh - 400px);
+            overflow-x: auto;
+            overflow-y: auto;
+        }
+
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        .dark .table-container::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .dark .table-container::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+
+        .dark .table-container::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        @media print {
+            @page {
+                size: A4;
+                margin: 10mm;
+            }
+
+            body {
+                background: white !important;
+                color: black !important;
+                padding: 0 !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .print-container {
+                box-shadow: none !important;
+                border: none !important;
+                width: 100% !important;
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 5mm !important;
+                border-radius: 0 !important;
+            }
+
+            /* Header Fix: Hide small redundant header, keep main one */
+            .print-header {
+                display: flex !important;
+                border-bottom: 2px solid #eee !important;
+                padding-bottom: 20px !important;
+            }
+
+            /* Table Print Layout */
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                table-layout: fixed !important;
+            }
+
+            th {
+                background-color: #f8fafc !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            td,
+            th {
+                border: 1px solid #e2e8f0 !important;
+                padding: 8px !important;
+                word-wrap: break-word !important;
+                color: black !important;
+            }
+
+            .report-row {
+                background: white !important;
+            }
+
+            /* Color Persistence */
+            .status-badge {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .bg-brand-600 {
+                background-color: #4f46e5 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .text-brand-600 {
+                color: #4f46e5 !important;
+            }
+
+            .text-emerald-600 {
+                color: #059669 !important;
+            }
+
+            .text-rose-600 {
+                color: #e11d48 !important;
+            }
+
+            .print-only {
+                display: block !important;
+            }
+        }
+
+        .print-only {
+            display: none;
+        }
+
+        .custom-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236366f1'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1em;
+        }
+    </style>
+</head>
+
+<body class="bg-[#f8fafc] dark:bg-[#020617] text-slate-900 dark:text-slate-100 p-4 lg:p-10 min-h-screen">
+
+    <div class="no-print mb-8 max-w-6xl mx-auto flex items-center justify-between">
+        <a href="{% url 'admin_reports' %}"
+            class="flex items-center gap-2 text-slate-500 hover:text-brand-600 font-bold transition-all">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span class="text-xs uppercase tracking-widest">Back</span>
+        </a>
+        <div class="flex gap-3">
+            <button id="theme-switch"
+                class="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-white/5">
+                <i id="theme-icon" class="fa-solid fa-moon text-brand-600"></i>
+            </button>
+            <button onclick="window.print()"
+                class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 text-white font-bold text-xs uppercase tracking-widest shadow-lg shadow-brand-500/20 hover:scale-[1.02] active:scale-95 transition-all">
+                <i class="fa-solid fa-print"></i> Print Table
+            </button>
+        </div>
+    </div>
+
+    <div
+        class="print-container max-w-6xl mx-auto bg-white dark:bg-slate-900 rounded-[2rem] p-8 lg:p-12 border border-slate-200 dark:border-white/5 shadow-xl relative">
+
+        <div
+            class="print-header flex flex-col md:flex-row justify-between items-center gap-6 mb-10 pb-8 border-b border-slate-100 dark:border-white/5">
+            <div class="flex items-center gap-5">
+                <div class="w-16 h-16 rounded-2xl bg-brand-600 flex items-center justify-center shadow-xl">
+                    <img src="{% static 'main/images/logobase_white.png' %}" class="w-8 h-8 object-contain" alt="Logo">
+                </div>
+                <div>
+                    <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                        {{ report_type }} <span class="text-brand-600">Report</span>
+                    </h1>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">
+                        {{ institution.institution_name }} • {{ selected_class.class_name }}
+                    </p>
+                </div>
+            </div>
+            <div class="text-center md:text-right">
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Issue Date</p>
+                <p class="text-sm font-bold text-slate-700 dark:text-white italic">{% now "d F Y" %}</p>
+            </div>
+        </div>
+
+        <div id="printFilterSummary" class="print-only mb-6 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+            <p
+                class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-200 pb-2">
+                Active Filters</p>
+            <div id="summaryContent" class="flex flex-wrap gap-x-6 gap-y-2 text-xs font-bold text-slate-700">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+
+        <div id="filter-anchor" class="no-print"></div>
+
+        <div class="table-container rounded-xl border border-slate-200 dark:border-white/5">
+            <table class="w-full text-left" id="reportTable">
+                <thead>
+                    <tr class="bg-slate-50 dark:bg-white/5">
+                        {% if report_type == 'Attendance' %}
+                        <th class="py-4 px-4 text-[10px] font-black uppercase text-slate-400">Date</th>
+                        <th class="py-4 px-4 text-[10px] font-black uppercase text-slate-400">Student Name</th>
+                        <th class="py-4 px-4 text-[10px] font-black uppercase text-slate-400 text-center">Subject (Hr)
+                        </th>
+                        <th class="py-4 px-4 text-[10px] font-black uppercase text-slate-400 text-right">Status</th>
+                        {% else %}
+                        <th class="py-4 px-4 text-[10px] font-black uppercase text-slate-400">Student</th>
+                        <th class="py-4 px-4 text-[10px] font-black uppercase text-slate-400">Quiz Name</th>
+                        <th class="py-4 px-4 text-[10px] font-black uppercase text-slate-400 text-center">Status</th>
+                        <th class="py-4 px-4 text-[10px] font-black uppercase text-slate-400 text-right">Marks (%)</th>
+                        <th class="py-4 px-4 text-[10px] font-black uppercase text-slate-400 text-center">Correct Answers</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    {% for rec in records %}
+                    <tr
+                        class="report-row border-b border-slate-50 dark:border-white/5 hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
+                        {% if report_type == 'Attendance' %}
+                        <td class="py-4 px-4 text-xs font-bold text-slate-500 italic">
+                           {{ rec.attendance_date|date:"d/m/Y" }}</td>
+                        <td
+                            class="py-4 px-4 text-xs font-black text-slate-800 dark:text-white uppercase student-name-cell">
+                            {{ rec.student.name }}</td>
+                        <td class="py-4 px-4 text-center">
+                            <span class="text-[10px] font-bold text-brand-600 uppercase">{{ rec.subject.subject_name }}
+                            </span>
+                            <span class="text-[10px] text-slate-400 ml-1">({{ rec.hour }})</span>
+                        </td>
+                        <td class="py-4 px-4 text-right">
+                            <span
+                                class="status-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter {% if rec.status == 'present' %} bg-emerald-50 text-emerald-600 {% else %} bg-rose-50 text-rose-600 {% endif %}">
+                                <i
+                                    class="fa-solid {% if rec.status == 'present' %} fa-circle-check {% else %} fa-circle-xmark {% endif %}"></i>
+                                {{ rec.status }}
+                            </span>
+                        </td>
+                        {% else %}
+                        <td
+                            class="py-4 px-4 text-xs font-black text-slate-800 dark:text-white uppercase student-name-cell">
+                            {{ rec.student_name }}</td>
+                        <td class="py-4 px-4">
+                            <p class="text-[10px] text-brand-600 font-bold uppercase">{{ rec.subject }}</p>
+                            <p class="text-xs font-bold text-slate-700 dark:text-slate-300 quiz-name-cell">
+                                {{rec.quiz_name }}</p>
+                        </td>
+                        <td class="py-4 px-4 text-center">
+                            <span
+                                class="status-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase 
+                                {% if rec.raw_status == 'pass' %} bg-emerald-50 text-emerald-600
+
+                                {% elif rec.raw_status == 'failed' %} bg-amber-50 text-amber-600
+                                {% else %} bg-rose-50 text-rose-600 {% endif %}">
+                                <i
+                                    class="fa-solid {% if rec.raw_status == 'pass' %} fa-circle-check
+                                   
+                                    {% elif rec.raw_status == 'failed' %} fa-triangle-exclamation
+                                    {% else %} fa-clock {% endif %}"></i>
+                                {{ rec.status }}
+                            </span>
+                        </td>
+                        <td class="py-4 px-4 text-right font-mono text-xs font-bold">
+                            <div class="flex flex-col items-end">
+                                <span class="text-indigo-600 dark:text-indigo-400 font-black">{{ rec.marks }}</span>
+                                
+                            </div>
+                        </td>
+                        <td class="py-4 px-4 text-center">
+                            {% if rec.correct_answers %}
+                            <span class="inline-flex items-center justify-center h-8 w-full rounded-lg bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ rec.correct_answers }}</span>
+                            </span>
+                            {% else %}
+                            <span class="text-xs text-slate-400">-</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tr id="noResultsRow" class="hidden">
+                    <td colspan="10" class="py-20 text-center">
+                        <div class="flex flex-col items-center justify-center">
+                            <div
+                                class="w-16 h-16 bg-slate-50 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
+                                <i class="fa-solid fa-magnifying-glass text-slate-300 text-xl"></i>
+                            </div>
+                            <p class="text-sm font-bold text-slate-400 uppercase tracking-widest">No matching records
+                                found</p>
+                            <p class="text-[10px] text-slate-400 mt-1">Try adjusting your filters</p>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // --- Theme Engine ---
+        const themeBtn = document.getElementById('theme-switch');
+        const themeIcon = document.getElementById('theme-icon');
+        const html = document.documentElement;
+
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+            themeIcon.className = 'fa-solid fa-sun text-amber-400';
+        }
+
+        themeBtn.addEventListener('click', () => {
+            const isDark = html.classList.toggle('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            themeIcon.className = isDark ? 'fa-solid fa-sun text-amber-400' : 'fa-solid fa-moon text-brand-600';
+        });
+
+        // --- Core Filtering Logic ---
+        document.addEventListener('DOMContentLoaded', function () {
+            const reportType = "{{ report_type }}";
+            const rows = document.querySelectorAll('.report-row');
+            const anchor = document.getElementById('filter-anchor');
+            const noResults = document.getElementById('noResultsRow');
+
+            const checkEmpty = () => {
+                const visibleRows = Array.from(rows).filter(r => r.style.display !== 'none');
+                noResults.classList.toggle('hidden', visibleRows.length > 0);
+            };
+
+            if (reportType === 'Quiz Results') {
+                renderQuizFilters(anchor, rows, checkEmpty);
+            } else if (reportType === 'Attendance') {
+                renderAttendanceFilters(anchor, rows, checkEmpty);
+            }
+        });
+
+        function renderQuizFilters(container, rows, callback) {
+            container.innerHTML = `
+                <div class="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4 p-5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
+                    <div>
+                        <label class="block text-[9px] font-black text-slate-400 uppercase mb-1.5 ml-1">Student</label>
+                        <select id="sSelect" class="custom-select w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+                            <option value="">All Students</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-black text-slate-400 uppercase mb-1.5 ml-1">Quiz</label>
+                        <select id="qSelect" class="custom-select w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+                            <option value="">All Quizzes</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-black text-slate-400 uppercase mb-1.5 ml-1">Status</label>
+                        <select id="statSelect" class="custom-select w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold">
+                            <option value="">Any Status</option>
+                            <option value="pass">Pass</option>
+                            <option value="failed">Failed</option>
+                            <option value="not attended">Not Attended</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button id="reset" class="w-full py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all">Clear</button>
+                    </div>
+                </div>`;
+
+            const sSel = document.getElementById('sSelect'), qSel = document.getElementById('qSelect'), stSel = document.getElementById('statSelect');
+            const students = new Set(), quizzes = new Set();
+            rows.forEach(r => {
+                students.add(r.querySelector('.student-name-cell').textContent.trim());
+                quizzes.add(r.querySelector('.quiz-name-cell').textContent.trim());
+            });
+            [...students].sort().forEach(s => sSel.add(new Option(s, s)));
+            [...quizzes].sort().forEach(q => qSel.add(new Option(q, q)));
+
+            const filter = () => {
+                const s = sSel.value.toLowerCase(), q = qSel.value.toLowerCase(), st = stSel.value.toLowerCase();
+                rows.forEach(row => {
+                    const rs = row.querySelector('.student-name-cell').textContent.toLowerCase().trim();
+                    const rq = row.querySelector('.quiz-name-cell').textContent.toLowerCase().trim();
+                    const rst = row.querySelector('.status-badge').textContent.toLowerCase().trim();
+                    row.style.display = (!s || rs === s) && (!q || rq === q) && (!st || rst === st) ? '' : 'none';
+                });
+
+                // Update Print Summary
+                const summary = document.getElementById('summaryContent');
+                if (summary) {
+                    let html = '';
+                    if (s) html += `<span>Student: <span class="text-brand-600 uppercase">${sSel.value}</span></span>`;
+                    if (q) html += `<span>Quiz: <span class="text-brand-600 uppercase">${qSel.value}</span></span>`;
+                    if (st) html += `<span>Status: <span class="text-brand-600 uppercase">${stSel.value}</span></span>`;
+                    summary.innerHTML = html || '<span>No filters applied</span>';
+                }
+
+                callback();
+            };
+            [sSel, qSel, stSel].forEach(e => e.addEventListener('change', filter));
+            document.getElementById('reset').addEventListener('click', () => { [sSel, qSel, stSel].forEach(e => e.value = ''); filter(); });
+        }
+
+        function renderAttendanceFilters(container, rows, callback) {
+            container.innerHTML = `
+                <div class="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4 p-5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
+                    <div>
+                        <label class="block text-[9px] font-black text-slate-400 uppercase mb-1.5 ml-1">Date</label>
+                        <input type="date" id="dInp" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-500 transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-black text-slate-400 uppercase mb-1.5 ml-1">Student</label>
+                        <select id="sSelA" class="custom-select w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold">
+                            <option value="">All Students</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button id="resA" class="w-full py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase hover:bg-rose-500 hover:text-white transition-all">Reset</button>
+                    </div>
+                </div>`;
+
+            const sSel = document.getElementById('sSelA'), dInp = document.getElementById('dInp');
+            const students = new Set();
+            rows.forEach(r => students.add(r.querySelector('.student-name-cell').textContent.trim()));
+            [...students].sort().forEach(s => sSel.add(new Option(s, s)));
+
+            const filter = () => {
+                const s = sSel.value.toLowerCase().trim(), d = dInp.value;
+                rows.forEach(row => {
+                    const rs = row.querySelector('.student-name-cell').textContent.trim().toLowerCase();
+                    const dParts = row.cells[0].textContent.trim().split('/');
+                    const rd = `${dParts[2]}-${dParts[1]}-${dParts[0]}`;
+                    row.style.display = (!s || rs === s) && (!d || rd === d) ? '' : 'none';
+                });
+
+                // Update Print Summary
+                const summary = document.getElementById('summaryContent');
+                if (summary) {
+                    let html = '';
+                    if (s) html += `<span>Student: <span class="text-brand-600 uppercase">${sSel.value}</span></span>`;
+                    if (d) html += `<span>Date: <span class="text-brand-600 uppercase">${d}</span></span>`;
+                    summary.innerHTML = html || '<span>No filters applied</span>';
+                }
+
+                callback();
+            };
+            [sSel, dInp].forEach(e => e.addEventListener('change', filter));
+            document.getElementById('resA').addEventListener('click', () => { sSel.value = ''; dInp.value = ''; filter(); });
+        }
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeLink = document.querySelector('.nav-item-active, .active, a[class*="bg-brand-500/10"][class*="text-white"], a[class*="bg-accent-fuchsia/10"][class*="text-white"], a[class*="bg-indigo-500/10"][class*="text-white"], a[class*="bg-emerald-500/10"][class*="text-white"]');
+            if (activeLink) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+</body>
+
+</html>
