@@ -37,7 +37,7 @@ ALLOWED_HOSTS = ['*']
 
 APPEND_SLASH = False
 
-
+BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:8000")
 # Application definition
 
 INSTALLED_APPS = [
@@ -48,7 +48,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.admin', 
     'main',
-    'channels'
+    'channels',
+    'anymail'
 ]
 
 

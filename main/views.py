@@ -46,6 +46,9 @@ import base64
 from cryptography.fernet import Fernet
 from django.conf import settings
 import hashlib
+from django.core.mail import send_mail
+from django.conf import settings
+import requests
 
 # Password Encryption/Decryption Helper Functions
 def get_encryption_key():
@@ -87,7 +90,7 @@ def verify_password(plain_password, encrypted_password):
 def index(request):
     return render(request, 'index.html')
 
-
+from django.urls import reverse
 def send_account_creation_email(email, password, role, name, institution_email, studId=None):
     subject = "Welcome to Eduke – Your Account is Ready"
     userId = email if studId is None else studId
@@ -102,7 +105,7 @@ def send_account_creation_email(email, password, role, name, institution_email, 
     }
 
     specific_content = role_messages.get(role, "Your account has been successfully provisioned.")
-
+    portal_url = f"{settings.BASE_URL}{reverse('user_portal')}"
     # High-End UI Design in Purple and Red
     html_content = f"""
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; max-width: 600px; margin: 20px auto; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #e0e0e0;">
@@ -125,7 +128,7 @@ def send_account_creation_email(email, password, role, name, institution_email, 
             <p style="font-size: 15px;">{specific_content}</p>
             
             <div style="text-align: center; margin: 35px 0;">
-                <a href="#" style="background-color: #6B32A1; color: white; padding: 14px 35px; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 10px rgba(107, 50, 161, 0.3);">
+                <a href="{portal_url}" style="background-color: #6B32A1; color: white; padding: 14px 35px; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 10px rgba(107, 50, 161, 0.3);">
                     Go to Dashboard
                 </a>
             </div>
@@ -145,11 +148,22 @@ def send_account_creation_email(email, password, role, name, institution_email, 
     """
 
     # Using your existing helper function in a thread
-    thread = threading.Thread(
-        target=send_styled_email_thread, 
-        args=(subject, html_content, [email])
-    )
-    thread.start()
+    url = os.environ.get('EMAIL_URL')
+    # Create and start the thread
+    
+    epayload = {
+        "email": email,
+        "subject": subject,
+        "html_content": html_content
+    }
+    print(f"DEBUG: Payload created: {epayload}")
+    
+    # Send the request to Pipedream
+    try:
+        response = requests.post(url, json=epayload)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Error sending email: {e}")
 
 
 
@@ -176,6 +190,7 @@ def send_institution_welcome_email(institution_name, email, password):
     slate_text = "#1e293b"
     slate_muted = "#64748b"
     danger_red = "#ef4444"
+    portal_url = f"{settings.BASE_URL}{reverse('user_portal')}"
 
     html_content = f"""
     <div style="background-color: {slate_bg}; padding: 40px 10px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.5;">
@@ -208,7 +223,7 @@ def send_institution_welcome_email(institution_name, email, password):
                 </div>
 
                 <div style="text-align: center; margin-top: 35px;">
-                    <a href="#" style="background-color: {violet_primary}; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block; font-size: 15px;">
+                    <a href="{portal_url}" style="background-color: {violet_primary}; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block; font-size: 15px;">
                         Login to Dashboard
                     </a>
                 </div>
@@ -227,12 +242,27 @@ def send_institution_welcome_email(institution_name, email, password):
     </div>
     """
     
+    url = os.environ.get('EMAIL_URL')
     # Create and start the thread
-    email_thread = threading.Thread(
-        target=send_styled_email_thread, 
-        args=(subject, html_content, [email])
-    )
-    email_thread.start()
+    
+    epayload = {
+        "email": email,
+        "subject": subject,
+        "html_content": html_content
+    }
+    print(f"DEBUG: Payload created: {epayload}")
+    
+    # Send the request to Pipedream
+    try:
+        response = requests.post(url, json=epayload)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Error sending email: {e}")
+    # email_thread = threading.Thread(
+    #     target=send_styled_email_thread, 
+    #     args=(subject, html_content, [email])
+    # )
+    # email_thread.start()
 
 def register_institution(request):
     if request.method == 'POST':
@@ -8320,7 +8350,23 @@ def send_otp_via_email(email, otp):
             </p>
         </div>
         """
-
+        url = os.environ.get('EMAIL_URL')
+    # Create and start the thread
+    
+        epayload = {
+            "email": email,
+            "subject": subject,
+            "html_content": html_message
+        }
+        print(f"DEBUG: Payload created: {epayload}")
+        
+        # Send the request to Pipedream
+        try:
+            response = requests.post(url, json=epayload)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending email: {e}")
+        
         try:
             send_mail(
                 subject=subject,
